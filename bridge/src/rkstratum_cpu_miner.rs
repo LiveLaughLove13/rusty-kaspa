@@ -9,12 +9,13 @@ use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 use std::time::Duration;
 use tokio::sync::{mpsc, watch};
 
-// Performance optimizations inspired by kaspanet/cpuminer:
-// 1. Batch hash counting: Update atomic counter every BATCH_SIZE hashes instead of every hash
-// 2. Reduced lock contention: Check for work updates every CHECK_WORK_INTERVAL hashes
-// 3. Optimized hot path: Minimize branches and checks in the inner mining loop
-// 4. Better nonce distribution: Use thread count as step size for optimal coverage
-// 5. Throttle optimization: Apply throttle less frequently to reduce overhead
+// Mirror share_handler's block confirmation behavior so "Blocks" means confirmed BLUE.
+const INTERNAL_BLOCK_CONFIRM_RETRY_DELAY: Duration = Duration::from_secs(2);
+const INTERNAL_BLOCK_CONFIRM_MAX_ATTEMPTS: usize = 30;
+
+// Performance: batch hash metrics and poll work periodically (high BPS networks).
+const BATCH_SIZE: u64 = 1000;
+const CHECK_WORK_INTERVAL: u64 = 200;
 
 #[cfg(feature = "rkstratum_cpu_miner")]
 pub struct InternalMinerMetrics {
@@ -41,8 +42,8 @@ pub struct InternalCpuMinerConfig {
 
 struct Work {
     id: u64,
-    block: Block,           // Used for PoW validation
-    rpc_block: RpcRawBlock, // Preserved original RPC block with covenant data
+    block: Block,
+    rpc_block: RpcRawBlock,
     pow_state: Arc<kaspa_pow::State>,
 }
 
@@ -128,28 +129,58 @@ pub fn spawn_internal_cpu_miner(
             if shutdown_flag_submit.load(Ordering::Acquire) {
                 break;
             }
-            // Optimization: Extract header info before submission (no expensive conversion needed)
-            let nonce = rpc_block.header.nonce;
 
-            // Submit the RPC block directly to node (preserves covenant data)
-            // Trust the node's response - if it accepts, count it as accepted immediately
-            // No expensive conversions or polling - just submit and trust the node
+            let meta = Block::try_from(rpc_block.clone()).ok().map(|b| {
+                use kaspa_consensus_core::hashing::header;
+                let hash = header::hash(&b.header).to_string();
+                (hash, b.header.nonce, b.header.blue_score)
+            });
+
+            metrics_submit.blocks_submitted.fetch_add(1, Ordering::Relaxed);
+
             let res = kaspa_api_submit.submit_rpc_block(rpc_block).await;
             match res {
                 Ok(response) => {
                     if response.report.is_success() {
-                        // Node accepted the block - count it immediately (no extra steps needed)
-                        // The node's acceptance is authoritative - no need for BLUE confirmation polling
-                        metrics_submit.blocks_submitted.fetch_add(1, Ordering::Relaxed);
-                        metrics_submit.blocks_accepted.fetch_add(1, Ordering::Relaxed);
-                        increment_internal_cpu_blocks_all_time();
-                        tracing::info!("[InternalMiner] block accepted by node (nonce: {})", nonce);
+                        tracing::info!("[InternalMiner] block accepted by node");
+
+                        if let Some((hash_str, nonce, bluescore)) = meta {
+                            let kaspa_api_confirm = Arc::clone(&kaspa_api_submit);
+                            let metrics_confirm = Arc::clone(&metrics_submit);
+                            tokio::spawn(async move {
+                                for _ in 0..INTERNAL_BLOCK_CONFIRM_MAX_ATTEMPTS {
+                                    match kaspa_api_confirm.get_current_block_color(&hash_str).await {
+                                        Ok(true) => {
+                                            metrics_confirm.blocks_accepted.fetch_add(1, Ordering::Relaxed);
+                                            increment_internal_cpu_blocks_all_time();
+                                            crate::prom::record_internal_cpu_recent_block(hash_str, nonce, bluescore);
+                                            tracing::info!("[InternalMiner] block confirmed BLUE in DAG");
+                                            return;
+                                        }
+                                        Ok(false) => {
+                                            tokio::time::sleep(INTERNAL_BLOCK_CONFIRM_RETRY_DELAY).await;
+                                        }
+                                        Err(_) => {
+                                            tokio::time::sleep(INTERNAL_BLOCK_CONFIRM_RETRY_DELAY).await;
+                                        }
+                                    }
+                                }
+                                tracing::info!(
+                                    "[InternalMiner] block not confirmed blue after {} attempts (not counted as Blocks)",
+                                    INTERNAL_BLOCK_CONFIRM_MAX_ATTEMPTS
+                                );
+                            });
+                        } else {
+                            tracing::warn!(
+                                "[InternalMiner] accepted block but could not derive consensus header for BLUE confirmation"
+                            );
+                        }
                     } else {
                         tracing::warn!("[InternalMiner] block rejected by node: {:?}", response.report);
                     }
                 }
                 Err(e) => {
-                    tracing::warn!("[InternalMiner] submit_block failed: {e}");
+                    tracing::warn!("[InternalMiner] submit_rpc_block failed: {e}");
                 }
             }
         }
@@ -163,8 +194,6 @@ pub fn spawn_internal_cpu_miner(
     let next_id = Arc::new(AtomicU64::new(0));
     let next_id_templates = Arc::clone(&next_id);
     tokio::spawn(async move {
-        // Optimization: Fetch template immediately on startup, don't wait for first interval tick
-        // This ensures work is available immediately when mining starts
         match kaspa_api_templates.get_block_template_rpc(&mining_address, "internal", "").await {
             Ok((block, rpc_block)) => {
                 let id = next_id_templates.fetch_add(1, Ordering::Relaxed);
@@ -173,7 +202,7 @@ pub fn spawn_internal_cpu_miner(
                 work_publisher.publish(Work { id, block, rpc_block, pow_state });
             }
             Err(e) => {
-                tracing::warn!("[InternalMiner] initial get_block_template failed: {e}");
+                tracing::warn!("[InternalMiner] initial get_block_template_rpc failed: {e}");
             }
         }
 
@@ -196,7 +225,7 @@ pub fn spawn_internal_cpu_miner(
                     work_publisher.publish(Work { id, block, rpc_block, pow_state });
                 }
                 Err(e) => {
-                    tracing::warn!("[InternalMiner] get_block_template failed: {e}");
+                    tracing::warn!("[InternalMiner] get_block_template_rpc failed: {e}");
                 }
             }
         }
@@ -205,18 +234,6 @@ pub fn spawn_internal_cpu_miner(
     let threads = cfg.threads.max(1);
     let throttle = cfg.throttle;
     let found_counter = Arc::new(AtomicU64::new(0));
-
-    // Optimization: Batch hash counting to reduce atomic operations
-    // Update metrics every BATCH_SIZE hashes instead of every single hash
-    const BATCH_SIZE: u64 = 1000;
-
-    // Optimization: Check for work updates less frequently to reduce lock contention
-    // Reduced to 250 for faster work updates (critical for high BPS networks like TN12 with 10 BPS)
-    // At ~0.28 MH/s per thread, 250 hashes = ~0.9ms, ensuring work updates are detected within ~1ms
-    // For single-threaded mining, this ensures minimal delay between finding blocks and getting new work
-    // Optimization: Reduced to 200 for faster work detection without excessive lock contention
-    // At ~0.28 MH/s per thread, 200 hashes = ~0.7ms check interval
-    const CHECK_WORK_INTERVAL: u64 = 200;
 
     for thread_idx in 0..threads {
         let work = Arc::clone(&work);
@@ -227,12 +244,8 @@ pub fn spawn_internal_cpu_miner(
 
         std::thread::spawn(move || {
             let mut last_version = 0u64;
-            // Optimization: Use thread index as initial nonce offset for better distribution
-            // Simple offset is faster than large prime multiplication
             let nonce_step = threads as u64;
             let mut nonce = thread_idx as u64;
-
-            // Local hash counter to batch atomic updates
             let mut local_hash_count = 0u64;
 
             loop {
@@ -247,102 +260,77 @@ pub fn spawn_internal_cpu_miner(
                     continue;
                 };
 
-                // Optimization: Reset work check counter when new work arrives
                 let mut hashes_since_work_check = 0u64;
 
-                // Mining loop for current work
                 loop {
-                    // Increment local counter
                     local_hash_count += 1;
                     hashes_since_work_check += 1;
 
-                    // Check PoW - this is the hot path, optimized for speed
-                    // Increment nonce BEFORE checking to optimize branch prediction
                     let current_nonce = nonce;
                     nonce = nonce.wrapping_add(nonce_step);
 
                     let (passed, _) = w.pow_state.check_pow(current_nonce);
                     if passed {
-                        // Batch update hash count before submitting
                         if local_hash_count > 0 {
                             metrics_threads.hashes_tried.fetch_add(local_hash_count, Ordering::Relaxed);
                             local_hash_count = 0;
                         }
 
-                        // Optimization: Minimize cloning - only clone header and update nonce
-                        // Transactions are already Arc'd internally, so clone is cheap
                         let mined_rpc_block = RpcRawBlock {
                             header: {
                                 let mut h = w.rpc_block.header.clone();
                                 h.nonce = current_nonce;
                                 h
                             },
-                            transactions: w.rpc_block.transactions.clone(), // Preserve original transactions with covenant data
+                            transactions: w.rpc_block.transactions.clone(),
                         };
                         let _ = submit_tx.send(mined_rpc_block);
                         found_counter.fetch_add(1, Ordering::Relaxed);
 
-                        // Optimization: Quick work check after finding block (minimal lock time)
-                        // Only check version number - if changed, we'll get new work in outer loop
-                        // Use try_lock for non-blocking check - if lock is busy, skip check and continue mining
                         if let Some(slot) = work.slot.try_lock() {
                             if slot.version != last_version {
                                 drop(slot);
-                                break; // New work available, get it immediately
+                                break;
                             }
-                            // Lock released here automatically
                         }
-                        // No new work yet - continue mining current work (still valid)
-                        // Reset counter to check more frequently for new work
                         hashes_since_work_check = 0;
                     }
 
-                    // Batch update hash count periodically to reduce atomic operations
                     if local_hash_count >= BATCH_SIZE {
                         metrics_threads.hashes_tried.fetch_add(BATCH_SIZE, Ordering::Relaxed);
                         local_hash_count -= BATCH_SIZE;
                     }
 
-                    // Apply throttle if configured (optimized: use counter instead of expensive modulo)
                     if let Some(d) = throttle {
-                        // Use bitwise AND for power-of-2 check (faster than modulo)
-                        // Check every 128 hashes (2^7) - use hashes_since_work_check for consistent throttling
                         if (hashes_since_work_check & 127) == 0 {
                             std::thread::sleep(d);
                         }
                     }
 
-                    // Periodically check for shutdown or work updates (reduces lock contention)
                     if hashes_since_work_check >= CHECK_WORK_INTERVAL {
-                        // Check shutdown first (cheap atomic read)
                         if shutdown_flag.load(Ordering::Acquire) {
-                            // Update remaining hash count before exiting
                             if local_hash_count > 0 {
                                 metrics_threads.hashes_tried.fetch_add(local_hash_count, Ordering::Relaxed);
                             }
                             return;
                         }
 
-                        // Check if work has been updated (less frequent lock acquisition)
                         let slot = work.slot.lock();
                         if slot.version != last_version {
                             drop(slot);
-                            // Update remaining hash count before getting new work
                             if local_hash_count > 0 {
                                 metrics_threads.hashes_tried.fetch_add(local_hash_count, Ordering::Relaxed);
                                 local_hash_count = 0;
                             }
-                            break; // Break to outer loop to get new work
+                            break;
                         }
                         drop(slot);
 
-                        // Reset counter for next batch
                         hashes_since_work_check = 0;
                     }
                 }
             }
 
-            // Final hash count update on thread exit
             if local_hash_count > 0 {
                 metrics_threads.hashes_tried.fetch_add(local_hash_count, Ordering::Relaxed);
             }

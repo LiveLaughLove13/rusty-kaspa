@@ -275,6 +275,12 @@ impl ShareHandler {
         }
 
         let stats = WorkStats::new(worker_id.clone());
+        // Seed per-worker displayed diff from current mining state so recreated
+        // entries do not start at 0.0 and get stuck in terminal/UI.
+        let seeded_diff = GetMiningState(ctx).stratum_diff().map(|d| d.diff_value).unwrap_or(0.0);
+        if seeded_diff > 0.0 {
+            *stats.min_diff.lock() = seeded_diff;
+        }
         stats_map.insert(worker_id.clone(), stats.clone());
         drop(stats_map);
 
@@ -1517,7 +1523,7 @@ impl ShareHandler {
                                 "-",
                                 format!("{}/{}/{}", accepted, submitted.saturating_sub(accepted), 0),
                                 accepted,
-                                all_time_blocks as i64, // Total blocks (all-time, persists during process lifetime)
+                                all_time_blocks as i64, // Total blocks (all-time BLUE-confirmed in this process)
                                 format_uptime(now.duration_since(start))
                             );
                             out.push(internal_line);
@@ -1537,7 +1543,7 @@ impl ShareHandler {
                     total_stales += stl;
                     total_invalids += inv;
                     total_blocks += blocks;
-                    // Add InternalCPU all-time blocks to total_blocks_all_time
+                    // Internal miner rows use TBLK = all-time BLUE count (not in Stratum overall stats).
                     #[cfg(feature = "rkstratum_cpu_miner")]
                     {
                         let all_time_blocks = INTERNAL_CPU_BLOCKS_ALL_TIME.load(std::sync::atomic::Ordering::Relaxed);

@@ -303,7 +303,6 @@ async fn main() -> Result<(), anyhow::Error> {
 
     // Optional: internal CPU miner (feature-gated)
     #[cfg(feature = "rkstratum_cpu_miner")]
-    #[cfg(feature = "rkstratum_cpu_miner")]
     {
         if cli.internal_cpu_miner {
             let mining_address = cli
@@ -313,8 +312,7 @@ async fn main() -> Result<(), anyhow::Error> {
 
             let threads = cli.internal_cpu_miner_threads.unwrap_or(1);
             let throttle = cli.internal_cpu_miner_throttle_ms.map(Duration::from_millis);
-            // Reduced default template poll interval from 250ms to 50ms for faster work updates
-            // This is critical for high BPS networks like TN12 (10 BPS = 100ms per block)
+            // Default 50ms template poll for faster work updates on high-BPS networks (e.g. TN12).
             let template_poll_interval = Duration::from_millis(cli.internal_cpu_miner_template_poll_ms.unwrap_or(50));
 
             let cfg = kaspa_stratum_bridge::InternalCpuMinerConfig {

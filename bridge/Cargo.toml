@@ -59,11 +59,13 @@ include_dir = "0.7"
 [target.'cfg(windows)'.dependencies]
 windows-sys = { version = "0.52", features = ["Win32_Foundation", "Win32_System_Console"] }
 
-# Platform-specific mimalloc dependency for Linux builds
-# This ensures the bridge builds correctly on Linux (including musl toolchain)
-# The override feature is not used for musl builds (handled by kaspa-alloc)
+# Non-musl Linux: mimalloc with global override (matches other workspace binaries).
 [target.'cfg(all(not(target_os = "macos"), not(target_env = "musl")))'.dependencies]
 mimalloc = { version = "0.1.48", default-features = false, features = ["override"] }
+
+# Musl: mimalloc without 'override' (kaspa-alloc / linker handles conflicts; CI uses allow-multiple-definition for the bridge).
+[target.'cfg(all(not(target_os = "macos"), target_env = "musl"))'.dependencies]
+mimalloc = { version = "0.1.48", default-features = false }
 
 [dev-dependencies]
 tokio-test = "0.4"
