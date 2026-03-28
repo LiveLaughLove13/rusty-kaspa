@@ -114,7 +114,10 @@ static BLOCK_SUBMIT_GUARD: Lazy<Mutex<BlockSubmitGuard>> =
 pub struct NodeStatusSnapshot {
     pub last_updated: Option<std::time::Instant>,
     pub is_connected: bool,
+    /// From `GetServerInfo` (sink recent + peers). May differ from `sync_status_rpc`.
     pub is_synced: Option<bool>,
+    /// From `get_sync_status` — same RPC the bridge uses before starting Stratum.
+    pub sync_status_rpc: Option<bool>,
     pub network_id: Option<String>,
     pub server_version: Option<String>,
     pub virtual_daa_score: Option<u64>,
@@ -342,12 +345,15 @@ impl KaspaApi {
             let dag_info_fut = self.client.get_block_dag_info_call(None, GetBlockDagInfoRequest {});
             let peers_fut = self.client.get_connected_peer_info_call(None, GetConnectedPeerInfoRequest {});
             let info_fut = self.client.get_info_call(None, GetInfoRequest {});
+            let sync_rpc_fut = self.client.get_sync_status();
 
-            let (server_info, dag_info, peers_info, info_resp) = tokio::join!(server_info_fut, dag_info_fut, peers_fut, info_fut);
+            let (server_info, dag_info, peers_info, info_resp, sync_rpc_res) =
+                tokio::join!(server_info_fut, dag_info_fut, peers_fut, info_fut, sync_rpc_fut);
 
             let mut snapshot = NODE_STATUS.lock();
             snapshot.last_updated = Some(std::time::Instant::now());
             snapshot.is_connected = connected;
+            snapshot.sync_status_rpc = sync_rpc_res.ok();
 
             if let Ok(server_info) = server_info {
                 snapshot.is_synced = Some(server_info.is_synced);

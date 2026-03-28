@@ -1415,10 +1415,15 @@ impl ShareHandler {
 
                 let mut out = Vec::new();
 
-                let sync_str = match node_status.is_synced {
+                // Match stratum startup: prefer get_sync_status over GetServerInfo.is_synced.
+                let sync_str = match node_status.sync_status_rpc {
                     Some(true) => "synced".to_string(),
                     Some(false) => "syncing".to_string(),
-                    None => "unknown".to_string(),
+                    None => match node_status.is_synced {
+                        Some(true) => "synced".to_string(),
+                        Some(false) => "syncing".to_string(),
+                        None => "unknown".to_string(),
+                    },
                 };
                 let conn_str = if node_status.is_connected { "connected" } else { "disconnected" };
 
