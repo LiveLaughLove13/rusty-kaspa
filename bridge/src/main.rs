@@ -300,9 +300,7 @@ async fn main() -> Result<(), anyhow::Error> {
         .await
         .map_err(|e| anyhow::anyhow!("Failed while waiting for node sync: {}", e))?;
     tracing::info!("Node is synced (get_sync_status), starting stratum listeners");
-    tracing::info!(
-        "IBD progress lines in kaspad logs can continue after this; they do not use the same criteria as get_sync_status."
-    );
+    tracing::info!("IBD progress lines in kaspad logs can continue after this; they do not use the same criteria as get_sync_status.");
 
     // Optional: internal CPU miner (feature-gated)
     #[cfg(feature = "rkstratum_cpu_miner")]
