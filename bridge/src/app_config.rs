@@ -40,6 +40,9 @@ pub struct GlobalConfig {
     pub var_diff_stats: bool,
     pub extranonce_size: u8,
     pub pow2_clamp: bool,
+    /// When `true` and built with `rkstratum_geoip`, perform optional HTTP geo lookup (egress IP → coarse location). See `bridge/docs/README.md`.
+    #[serde(default)]
+    pub approximate_geo_lookup: bool,
     #[serde(deserialize_with = "deserialize_coinbase_tag_suffix")]
     pub coinbase_tag_suffix: Option<String>,
 }
@@ -198,6 +201,7 @@ impl Default for GlobalConfig {
             var_diff_stats: false,
             extranonce_size: 0,
             pow2_clamp: false,
+            approximate_geo_lookup: false,
             coinbase_tag_suffix: None,
         }
     }

@@ -3,6 +3,7 @@ pub mod client_handler;
 pub mod default_client;
 pub mod errors;
 pub mod hasher;
+pub mod host_metrics;
 pub mod jsonrpc_event;
 pub mod kaspaapi;
 pub mod log_colors;
