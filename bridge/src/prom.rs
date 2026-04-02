@@ -12,7 +12,7 @@ use std::time::{Duration, Instant};
 use crate::app_config::BridgeConfig;
 use crate::host_metrics::{geoip_effective, get_host_snapshot, host_metrics_compiled};
 use crate::kaspaapi::node_status_for_api;
-use crate::net_utils::bind_addr_from_port;
+use crate::net_utils::bind_addr_for_operator_http;
 use std::path::PathBuf;
 
 /// Worker labels for Prometheus metrics
@@ -514,7 +514,7 @@ pub async fn start_web_server_all(port: &str) -> Result<(), Box<dyn std::error::
     init_metrics();
     crate::host_metrics::spawn_host_metrics_task();
 
-    let addr_str = bind_addr_from_port(port);
+    let addr_str = bind_addr_for_operator_http(port);
     let addr: SocketAddr = addr_str.parse()?;
     let listener = TcpListener::bind(addr).await?;
     let web_bind_for_status = addr_str.clone();
@@ -1664,7 +1664,7 @@ pub async fn start_prom_server(port: &str, instance_id: &str) -> Result<(), Box<
 
     let instance_id = instance_id.to_string();
 
-    let addr_str = bind_addr_from_port(port);
+    let addr_str = bind_addr_for_operator_http(port);
 
     let addr: SocketAddr = addr_str.parse()?;
     let listener = TcpListener::bind(addr).await?;
