@@ -19,6 +19,7 @@ var_diff_stats: true
 pow2_clamp: true
 extranonce_size: 2
 coinbase_tag_suffix: ""
+approximate_geo_lookup: true   # or CLI: --approximate-geo-lookup true (see bridge/docs/README.md)
 
 instances:
   - stratum_port: ":5559"

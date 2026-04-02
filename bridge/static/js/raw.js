@@ -36,17 +36,20 @@ function showToast(msg) {
 async function refreshRaw() {
   const pre = document.getElementById('raw');
   try {
-    const [statusRes, statsRes] = await Promise.all([
+    const [statusRes, statsRes, hostRes] = await Promise.all([
       fetch('api/status', { cache: 'no-store' }),
       fetch('api/stats', { cache: 'no-store' }),
+      fetch('api/host', { cache: 'no-store' }),
     ]);
     const statusText = await statusRes.text();
     const statsText = await statsRes.text();
+    const hostText = await hostRes.text();
 
     const status = statusRes.ok ? JSON.parse(statusText) : { error: statusText, http: statusRes.status };
     const stats = statsRes.ok ? JSON.parse(statsText) : { error: statsText, http: statsRes.status };
+    const host = hostRes.ok ? JSON.parse(hostText) : { error: hostText, http: hostRes.status };
 
-    pre.textContent = JSON.stringify({ status, stats }, null, 2);
+    pre.textContent = JSON.stringify({ status, stats, host }, null, 2);
   } catch (e) {
     pre.textContent = String(e);
   }

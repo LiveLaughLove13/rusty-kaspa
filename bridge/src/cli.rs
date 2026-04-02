@@ -158,6 +158,10 @@ pub struct Cli {
     #[arg(long)]
     pub coinbase_tag_suffix: Option<String>,
 
+    /// Enable or disable approximate geo lookup from egress IP. Overrides `approximate_geo_lookup` from config when set. Requires `rkstratum_geoip` build.
+    #[arg(long, value_parser = BoolishValueParser::new())]
+    pub approximate_geo_lookup: Option<bool>,
+
     #[arg(long)]
     pub stratum_port: Option<String>,
 
@@ -257,6 +261,9 @@ pub fn apply_cli_overrides(config: &mut BridgeConfig, cli: &Cli) -> Result<(), a
     if let Some(s) = cli.coinbase_tag_suffix.as_deref() {
         let s = s.trim();
         config.global.coinbase_tag_suffix = if s.is_empty() { None } else { Some(s.to_string()) };
+    }
+    if let Some(v) = cli.approximate_geo_lookup {
+        config.global.approximate_geo_lookup = v;
     }
 
     if !cli.instances.is_empty() {
