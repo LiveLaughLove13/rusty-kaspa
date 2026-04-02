@@ -267,6 +267,12 @@ impl ShareHandler {
         }
 
         let stats = WorkStats::new(worker_id.clone());
+        // Seed per-worker displayed diff from current mining state so recreated
+        // entries do not start at 0.0 and get stuck in terminal/UI.
+        let seeded_diff = GetMiningState(ctx).stratum_diff().map(|d| d.diff_value).unwrap_or(0.0);
+        if seeded_diff > 0.0 {
+            *stats.min_diff.lock() = seeded_diff;
+        }
         stats_map.insert(worker_id.clone(), stats.clone());
         drop(stats_map);
 
@@ -1336,10 +1342,10 @@ impl ShareHandler {
 
                 let mut total_target: Option<f64> = Some(entries[0].1);
                 for (inst_short, target_spm, _, stats, overall) in entries.iter() {
-                    if let Some(t) = total_target {
-                        if (t - *target_spm).abs() > 0.0001 {
-                            total_target = None;
-                        }
+                    if let Some(t) = total_target
+                        && (t - *target_spm).abs() > 0.0001
+                    {
+                        total_target = None;
                     }
 
                     total_shares += *overall.shares_found.lock();
@@ -1525,6 +1531,7 @@ impl ShareHandler {
                     total_stales += stl;
                     total_invalids += inv;
                     total_blocks += blocks;
+                    total_blocks_all_time += blocks; // Also add to all-time total for the "Total" column
                 }
 
                 let overall_spm = if total_uptime_mins > 0.0 { (total_shares as f64) / total_uptime_mins } else { 0.0 };
