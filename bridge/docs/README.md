@@ -180,9 +180,13 @@ On Windows, Ctrl+C may show `STATUS_CONTROL_C_EXIT` which is expected.
 
 The bridge includes a built-in web dashboard accessible at the configured `web_dashboard_port`.
 
-**Access:** Open `http://127.0.0.1:3030/` (or your configured port) in a web browser.
+**Access:** Open `http://127.0.0.1:3030/` (or your configured port) in a web browser on **the same PC** that runs the bridge.
+
+**Local-first binding:** If you set only a port (`:3030` or `3030`), the dashboard and per-instance **`/metrics`** HTTP servers bind to **`127.0.0.1`**, not the whole network. That keeps the UI and JSON APIs off your LAN/WAN by default—good for a typical home machine. **Stratum** ports (`stratum_port`, `prom_port` when used as port-only) still listen on **all interfaces** (`0.0.0.0`) so miners on your LAN can connect. To open the dashboard from another device, set an explicit address, e.g. `web_dashboard_port: "0.0.0.0:3030"` or your LAN IP.
 
 **Note:** The web dashboard is only started if `web_dashboard_port` is configured (non-empty). The sample `config.yaml` sets this to `:3030` by default. If no config file is used and no `--web-dashboard-port` is specified, the dashboard will not be available.
+
+**Casual users:** Do not set `RKSTRATUM_ALLOW_CONFIG_WRITE=1` unless you understand that it allows changing `config.yaml` via `POST /api/config` with no password (only use on trusted localhost or behind your own protection).
 
 For a structured description of every UI area (header, node panel, trends, blocks, workers, Raw view), see **[UI.md](./UI.md)**.
 

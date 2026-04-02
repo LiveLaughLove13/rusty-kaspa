@@ -655,9 +655,86 @@ nav .rk-header-bridge-grid {
 .rk-workers-table-wrap {
   border: 1px solid rgba(112, 199, 186, 0.12);
   border-radius: 0.65rem;
-  overflow: auto;
+  overflow-x: auto;
+  overflow-y: visible;
   background: rgba(8, 12, 20, 0.45);
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.03);
+  /* Prefer fitting the panel: table uses width 100% + fixed layout; aux columns hidden < xl */
+  max-width: 100%;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Rarely-needed share / node diagnostics — hidden on smaller widths (see row modal for full row). */
+@media (max-width: 1279px) {
+  .rk-workers-table th.rk-wt-aux,
+  .rk-workers-table td.rk-wt-aux {
+    display: none;
+  }
+}
+
+/* Phones: fixed % columns collapse into unreadable slivers — use auto layout + min widths + horizontal scroll. */
+@media (max-width: 767px) {
+  .rk-workers-table {
+    table-layout: auto;
+    width: max-content !important; /* override Tailwind w-full on the table */
+    min-width: 0;
+  }
+
+  .rk-workers-table colgroup {
+    display: none;
+  }
+
+  .rk-workers-table th,
+  .rk-workers-table td {
+    max-width: none;
+    min-width: 2.75rem;
+  }
+
+  .rk-workers-table th:nth-child(1),
+  .rk-workers-table td:nth-child(1) {
+    min-width: 5.5rem;
+  }
+
+  .rk-workers-table th:nth-child(2),
+  .rk-workers-table td:nth-child(2) {
+    min-width: 4.25rem;
+  }
+
+  .rk-workers-table td.rk-wt-wallet,
+  .rk-workers-table th:nth-child(3) {
+    min-width: 10.5rem;
+    max-width: 12.5rem;
+  }
+
+  .rk-workers-table th:nth-child(4),
+  .rk-workers-table td:nth-child(4) {
+    min-width: 5.25rem;
+  }
+
+  .rk-workers-table th:nth-child(5),
+  .rk-workers-table td:nth-child(5) {
+    min-width: 3.25rem;
+  }
+
+  .rk-workers-table th:nth-child(6),
+  .rk-workers-table td:nth-child(6) {
+    min-width: 3rem;
+  }
+
+  .rk-workers-table th:nth-child(11),
+  .rk-workers-table td:nth-child(11) {
+    min-width: 3.25rem;
+  }
+
+  .rk-workers-table td.rk-wt-status,
+  .rk-workers-table th:nth-child(18) {
+    min-width: 4.5rem;
+  }
+
+  .rk-workers-table th.rk-wt-phone-hide,
+  .rk-workers-table td.rk-wt-phone-hide {
+    display: none;
+  }
 }
 
 .rk-workers-table thead th {
@@ -675,6 +752,34 @@ nav .rk-header-bridge-grid {
 
 .rk-workers-table tbody tr:hover {
   background: rgba(112, 199, 186, 0.07);
+}
+
+.rk-workers-table {
+  table-layout: fixed;
+}
+
+.rk-workers-table td,
+.rk-workers-table th {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  padding-left: 0.35rem;
+  padding-right: 0.35rem;
+}
+
+/* Wallet cell: allow inner flex row to shrink */
+.rk-workers-table td.rk-wt-wallet {
+  overflow: visible;
+  white-space: normal;
+}
+
+.rk-workers-table td.rk-wt-wallet > div {
+  min-width: 0;
+}
+
+.rk-workers-table td.rk-wt-status {
+  overflow: visible;
+  white-space: normal;
 }
 
 /* Nested collapse within Recent blocks / Workers panels */

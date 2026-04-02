@@ -480,6 +480,31 @@ fn test_bind_addr_from_port_empty() {
     assert_eq!(bind_addr_from_port("   "), "");
 }
 
+#[cfg(test)]
+#[test]
+fn test_bind_addr_for_operator_http_port_only_defaults_loopback() {
+    use kaspa_stratum_bridge::net_utils::bind_addr_for_operator_http;
+    assert_eq!(bind_addr_for_operator_http(":3030"), "127.0.0.1:3030");
+    assert_eq!(bind_addr_for_operator_http("3030"), "127.0.0.1:3030");
+}
+
+#[cfg(test)]
+#[test]
+fn test_bind_addr_for_operator_http_explicit_address_unchanged() {
+    use kaspa_stratum_bridge::net_utils::bind_addr_for_operator_http;
+    assert_eq!(bind_addr_for_operator_http("127.0.0.1:3030"), "127.0.0.1:3030");
+    assert_eq!(bind_addr_for_operator_http("0.0.0.0:3030"), "0.0.0.0:3030");
+    assert_eq!(bind_addr_for_operator_http("192.168.1.1:2118"), "192.168.1.1:2118");
+}
+
+#[cfg(test)]
+#[test]
+fn test_bind_addr_for_operator_http_empty() {
+    use kaspa_stratum_bridge::net_utils::bind_addr_for_operator_http;
+    assert_eq!(bind_addr_for_operator_http(""), "");
+    assert_eq!(bind_addr_for_operator_http("   "), "");
+}
+
 // JSON-RPC event tests
 #[cfg(test)]
 #[test]

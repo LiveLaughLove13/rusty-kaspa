@@ -1881,9 +1881,9 @@ function workerWalletCellHtml(w) {
   const title = escapeHtmlAttr(wallet);
   const display = escapeHtmlAttr(truncateWalletForDisplay(wallet));
   const btn = wallet
-    ? `<button type="button" class="bg-surface-1 border border-card px-2 py-0.5 rounded text-xs hover:border-kaspa-primary shrink-0" data-copy-text="${escapeHtmlAttr(wallet)}">Copy</button>`
+    ? `<button type="button" class="bg-surface-1 border border-card px-1.5 py-0.5 rounded text-[0.65rem] sm:text-xs hover:border-kaspa-primary shrink-0" data-copy-text="${escapeHtmlAttr(wallet)}">Copy</button>`
     : '';
-  return `<div class="flex items-center gap-2 min-w-0">
+  return `<div class="flex items-center gap-1 min-w-0">
             <span class="min-w-0 flex-1 truncate" title="${title}">${display}</span>
             ${btn}
           </div>`;
@@ -1899,35 +1899,35 @@ function workerShareThroughErrorTds(w) {
   const err = workerStatNum(w, 'errors', 'errors');
   const bal = workerBalanceKasText(w);
   return `
-        <td class="py-1.5 pr-3 tabular-nums">${w.shares ?? '-'}</td>
-        <td class="py-1.5 pr-3 tabular-nums">${w.stale ?? '-'}</td>
-        <td class="py-1.5 pr-3 tabular-nums">${w.invalid ?? '-'}</td>
-        <td class="py-1.5 pr-3 tabular-nums" title="Duplicate shares">${dup}</td>
-        <td class="py-1.5 pr-3 tabular-nums" title="Weak shares">${weak}</td>
-        <td class="py-1.5 pr-3 tabular-nums">${w.blocks ?? '-'}</td>
-        <td class="py-1.5 pr-3 tabular-nums" title="Blocks accepted by node">${acc}</td>
-        <td class="py-1.5 pr-3 tabular-nums" title="Blocks not confirmed blue">${nblue}</td>
-        <td class="py-1.5 pr-3 tabular-nums" title="Disconnects">${disc}</td>
-        <td class="py-1.5 pr-3 tabular-nums" title="Jobs sent">${jobs}</td>
-        <td class="py-1.5 pr-3 tabular-nums" title="Balance (KAS)">${bal}</td>
-        <td class="py-1.5 pr-3 tabular-nums" title="Errors">${err}</td>`;
+        <td class="py-1.5 tabular-nums">${w.shares ?? '-'}</td>
+        <td class="py-1.5 tabular-nums rk-wt-aux">${w.stale ?? '-'}</td>
+        <td class="py-1.5 tabular-nums rk-wt-aux">${w.invalid ?? '-'}</td>
+        <td class="py-1.5 tabular-nums rk-wt-aux" title="Duplicate shares">${dup}</td>
+        <td class="py-1.5 tabular-nums rk-wt-aux" title="Weak shares">${weak}</td>
+        <td class="py-1.5 tabular-nums">${w.blocks ?? '-'}</td>
+        <td class="py-1.5 tabular-nums rk-wt-aux" title="Blocks accepted by node">${acc}</td>
+        <td class="py-1.5 tabular-nums rk-wt-aux" title="Blocks not confirmed blue">${nblue}</td>
+        <td class="py-1.5 tabular-nums rk-wt-aux" title="Disconnects">${disc}</td>
+        <td class="py-1.5 tabular-nums rk-wt-phone-hide" title="Jobs sent">${jobs}</td>
+        <td class="py-1.5 tabular-nums rk-wt-phone-hide" title="Balance (KAS)">${bal}</td>
+        <td class="py-1.5 tabular-nums rk-wt-aux" title="Errors">${err}</td>`;
 }
 
 function internalCpuShareThroughErrorTds({ shares, stale, invalid, blocksAccepted }) {
   const b = Number(blocksAccepted) || 0;
   return `
-        <td class="py-1.5 pr-3 tabular-nums">${shares}</td>
-        <td class="py-1.5 pr-3 tabular-nums">${stale}</td>
-        <td class="py-1.5 pr-3 tabular-nums">${invalid}</td>
-        <td class="py-1.5 pr-3 tabular-nums" title="Duplicate shares">0</td>
-        <td class="py-1.5 pr-3 tabular-nums" title="Weak shares">0</td>
-        <td class="py-1.5 pr-3 tabular-nums">${b}</td>
-        <td class="py-1.5 pr-3 tabular-nums" title="Blocks accepted by node">${b}</td>
-        <td class="py-1.5 pr-3 tabular-nums" title="Blocks not confirmed blue">-</td>
-        <td class="py-1.5 pr-3 tabular-nums" title="Disconnects">-</td>
-        <td class="py-1.5 pr-3 tabular-nums" title="Jobs sent">-</td>
-        <td class="py-1.5 pr-3 tabular-nums" title="Balance (KAS)">-</td>
-        <td class="py-1.5 pr-3 tabular-nums" title="Errors">-</td>`;
+        <td class="py-1.5 tabular-nums">${shares}</td>
+        <td class="py-1.5 tabular-nums rk-wt-aux">${stale}</td>
+        <td class="py-1.5 tabular-nums rk-wt-aux">${invalid}</td>
+        <td class="py-1.5 tabular-nums rk-wt-aux" title="Duplicate shares">0</td>
+        <td class="py-1.5 tabular-nums rk-wt-aux" title="Weak shares">0</td>
+        <td class="py-1.5 tabular-nums">${b}</td>
+        <td class="py-1.5 tabular-nums rk-wt-aux" title="Blocks accepted by node">${b}</td>
+        <td class="py-1.5 tabular-nums rk-wt-aux" title="Blocks not confirmed blue">-</td>
+        <td class="py-1.5 tabular-nums rk-wt-aux" title="Disconnects">-</td>
+        <td class="py-1.5 tabular-nums" title="Jobs sent">-</td>
+        <td class="py-1.5 tabular-nums" title="Balance (KAS)">-</td>
+        <td class="py-1.5 tabular-nums rk-wt-aux" title="Errors">-</td>`;
 }
 
 function workerStatusSessionTds(w) {
@@ -1935,19 +1935,19 @@ function workerStatusSessionTds(w) {
     ? `<span class="inline-flex items-center gap-1.5"><span class="w-2 h-2 rounded-full ${getStatusBgColor(w.status)}"></span><span class="${getStatusColor(w.status)} capitalize">${escapeHtmlAttr(w.status)}</span></span>`
     : '-';
   return `
-        <td class="py-1.5 pr-3">${statusHtml}</td>
-        <td class="py-1.5 pr-3" title="${w.lastSeen ? formatUnixSeconds(w.lastSeen) : ''}">${w.lastSeen ? formatRelativeTime(w.lastSeen) : '-'}</td>
-        <td class="py-1.5 pr-3">${w.sessionUptime != null ? formatUptime(w.sessionUptime) : '-'}</td>`;
+        <td class="py-1.5 rk-wt-status">${statusHtml}</td>
+        <td class="py-1.5 rk-wt-phone-hide" title="${w.lastSeen ? formatUnixSeconds(w.lastSeen) : ''}">${w.lastSeen ? formatRelativeTime(w.lastSeen) : '-'}</td>
+        <td class="py-1.5 rk-wt-phone-hide" title="${w.sessionUptime != null ? formatUptime(w.sessionUptime) : ''}">${w.sessionUptime != null ? formatUptime(w.sessionUptime) : '-'}</td>`;
 }
 
 function buildWorkerDataRowHtml(w) {
   const workerDisplay = displayWorkerName(w.worker);
   return (
-    `<td class="py-1.5 pr-3" title="${escapeHtmlAttr(w.instance || '')}">${w.instance || '-'}</td>` +
-    `<td class="py-1.5 pr-3" title="${escapeHtmlAttr(workerDisplay)}">${escapeHtmlAttr(workerDisplay)}</td>` +
-    `<td class="py-1.5 pr-3 w-[13rem] max-w-[13rem] align-top">${workerWalletCellHtml(w)}</td>` +
-    `<td class="py-1.5 pr-3">${formatHashrateHs((w.hashrate || 0) * 1e9)}</td>` +
-    `<td class="py-1.5 pr-3">${w.currentDifficulty != null ? formatDifficulty(w.currentDifficulty) : '-'}</td>` +
+    `<td class="py-1.5" title="${escapeHtmlAttr(w.instance || '')}">${escapeHtmlAttr(w.instance || '-')}</td>` +
+    `<td class="py-1.5" title="${escapeHtmlAttr(workerDisplay)}">${escapeHtmlAttr(workerDisplay)}</td>` +
+    `<td class="py-1.5 rk-wt-wallet align-top">${workerWalletCellHtml(w)}</td>` +
+    `<td class="py-1.5" title="${escapeHtmlAttr(formatHashrateHs((w.hashrate || 0) * 1e9))}">${formatHashrateHs((w.hashrate || 0) * 1e9)}</td>` +
+    `<td class="py-1.5">${w.currentDifficulty != null ? formatDifficulty(w.currentDifficulty) : '-'}</td>` +
     workerShareThroughErrorTds(w) +
     workerStatusSessionTds(w)
   );
@@ -1961,13 +1961,13 @@ function internalCpuWorkerRowHtml(icpu) {
   const invalid = Number(icpu.invalid ?? 0) || 0;
   const b = Number(icpu.blocksAccepted) || 0;
   return (
-    `<td class="py-1.5 pr-3">-</td>` +
-    `<td class="py-1.5 pr-3">${escapeHtmlAttr(displayWorkerName('InternalCPU'))}</td>` +
-    `<td class="py-1.5 pr-3 w-[13rem] max-w-[13rem] align-top">${workerWalletCellHtml({ wallet })}</td>` +
-    `<td class="py-1.5 pr-3">${formatHashrateHs(hashrateHs)}</td>` +
-    `<td class="py-1.5 pr-3">-</td>` +
+    `<td class="py-1.5">-</td>` +
+    `<td class="py-1.5">${escapeHtmlAttr(displayWorkerName('InternalCPU'))}</td>` +
+    `<td class="py-1.5 rk-wt-wallet align-top">${workerWalletCellHtml({ wallet })}</td>` +
+    `<td class="py-1.5" title="${escapeHtmlAttr(formatHashrateHs(hashrateHs))}">${formatHashrateHs(hashrateHs)}</td>` +
+    `<td class="py-1.5">-</td>` +
     internalCpuShareThroughErrorTds({ shares, stale, invalid, blocksAccepted: b }) +
-    `<td class="py-1.5 pr-3">-</td><td class="py-1.5 pr-3">-</td><td class="py-1.5 pr-3">-</td>`
+    `<td class="py-1.5 rk-wt-status">-</td><td class="py-1.5 rk-wt-phone-hide">-</td><td class="py-1.5 rk-wt-phone-hide">-</td>`
   );
 }
 

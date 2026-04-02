@@ -57,11 +57,13 @@ Data comes from periodic polling of `/api/status`, `/api/stats`, and (for charts
 
 - **Collapse**, **Download CSV**.
 - **Charts & summary** (sub-collapse) — Aggregate tiles; horizontal bar charts (hashrate, difficulty when present, shares/stale/invalid/blocks, session uptime when present). Internal CPU miner appears as a row when enabled and wallet filter is off.
-- **Worker table** (sub-collapse) — Instance, worker, wallet, hashrate, difficulty, shares, stale, invalid, blocks, status, last seen, session uptime.
+- **Worker table** (sub-collapse) — From **768px** width up, `table-layout: fixed` + percentage columns fit the panel. Below **1280px**, auxiliary columns (stale, invalid, dup, weak, acc Δ, N-blue, DC, err) hide. **Phones (≤767px):** table switches to `auto` layout with column **min-widths** and **horizontal swipe** so headers do not collapse; Jobs, Bal, Last seen, and Session hide—tap a row for the detail modal. “Session” is session uptime when that column is visible.
 
 ---
 
 ## Cross-cutting behavior
+
+- **Dashboard URL** — With the default `web_dashboard_port` form `:3030`, the server listens on **127.0.0.1** only; use the browser on the same machine, or set `0.0.0.0:3030` (or your LAN IP) in config if you need access from another device. Stratum mining ports are unchanged (still reachable on the LAN).
 
 - **Collapsible sections** — Many panels remember open/closed state in `localStorage` (except Raw, which defaults collapsed where configured).
 - **Toasts** — Copy and cache actions surface short feedback.
