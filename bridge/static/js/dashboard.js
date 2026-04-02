@@ -1865,15 +1865,26 @@ function workerBalanceKasText(w) {
   return n.toFixed(4);
 }
 
+/** Shorten long Kaspa addresses for table cells; full value stays in title and Copy. */
+function truncateWalletForDisplay(wallet) {
+  const s = String(wallet ?? '').trim();
+  if (!s) return '-';
+  if (s.length <= 22) return s;
+  const head = 14;
+  const tail = 10;
+  if (head + tail + 3 >= s.length) return `${s.slice(0, 20)}…`;
+  return `${s.slice(0, head)}…${s.slice(-tail)}`;
+}
+
 function workerWalletCellHtml(w) {
   const wallet = String(w?.wallet ?? '').trim();
   const title = escapeHtmlAttr(wallet);
-  const display = escapeHtmlAttr(wallet || '-');
+  const display = escapeHtmlAttr(truncateWalletForDisplay(wallet));
   const btn = wallet
     ? `<button type="button" class="bg-surface-1 border border-card px-2 py-0.5 rounded text-xs hover:border-kaspa-primary shrink-0" data-copy-text="${escapeHtmlAttr(wallet)}">Copy</button>`
     : '';
   return `<div class="flex items-center gap-2 min-w-0">
-            <span class="min-w-0 truncate" title="${title}">${display}</span>
+            <span class="min-w-0 flex-1 truncate" title="${title}">${display}</span>
             ${btn}
           </div>`;
 }
@@ -1934,7 +1945,7 @@ function buildWorkerDataRowHtml(w) {
   return (
     `<td class="py-1.5 pr-3" title="${escapeHtmlAttr(w.instance || '')}">${w.instance || '-'}</td>` +
     `<td class="py-1.5 pr-3" title="${escapeHtmlAttr(workerDisplay)}">${escapeHtmlAttr(workerDisplay)}</td>` +
-    `<td class="py-1.5 pr-3">${workerWalletCellHtml(w)}</td>` +
+    `<td class="py-1.5 pr-3 w-[13rem] max-w-[13rem] align-top">${workerWalletCellHtml(w)}</td>` +
     `<td class="py-1.5 pr-3">${formatHashrateHs((w.hashrate || 0) * 1e9)}</td>` +
     `<td class="py-1.5 pr-3">${w.currentDifficulty != null ? formatDifficulty(w.currentDifficulty) : '-'}</td>` +
     workerShareThroughErrorTds(w) +
@@ -1952,7 +1963,7 @@ function internalCpuWorkerRowHtml(icpu) {
   return (
     `<td class="py-1.5 pr-3">-</td>` +
     `<td class="py-1.5 pr-3">${escapeHtmlAttr(displayWorkerName('InternalCPU'))}</td>` +
-    `<td class="py-1.5 pr-3">${workerWalletCellHtml({ wallet })}</td>` +
+    `<td class="py-1.5 pr-3 w-[13rem] max-w-[13rem] align-top">${workerWalletCellHtml({ wallet })}</td>` +
     `<td class="py-1.5 pr-3">${formatHashrateHs(hashrateHs)}</td>` +
     `<td class="py-1.5 pr-3">-</td>` +
     internalCpuShareThroughErrorTds({ shares, stale, invalid, blocksAccepted: b }) +
@@ -2156,7 +2167,7 @@ function updateWorkersViz(rows) {
       labels,
       datasets: [
         {
-          label: 'GH/s',
+          label: 'Hashrate',
           data: hashrates,
           backgroundColor: 'rgba(34, 197, 94, 0.55)',
           borderColor: 'rgba(34, 197, 94, 0.95)',
@@ -2178,7 +2189,7 @@ function updateWorkersViz(rows) {
         labels,
         datasets: [
           {
-            label: 'Difficulty',
+            label: 'Diff',
             data: difficulties.map((d) => (d != null && Number.isFinite(d) ? d : 0)),
             backgroundColor: difficulties.map((d) =>
               d != null && Number.isFinite(d) ? 'rgba(168, 85, 247, 0.55)' : 'rgba(55, 65, 81, 0.25)',
@@ -3004,9 +3015,9 @@ async function refresh(options = {}) {
         <td class="py-1.5 pr-3" title="${escapeHtmlAttr(b.instance || '')}">${b.instance || '-'}</td>
         <td class="py-1.5 pr-3" title="${escapeHtmlAttr(b.bluescore || '')}">${b.bluescore || '-'}</td>
         <td class="py-1.5 pr-3" title="${escapeHtmlAttr(workerDisplay)}">${escapeHtmlAttr(workerDisplay)}</td>
-        <td class="py-1.5 pr-3">
+        <td class="py-1.5 pr-3 w-[13rem] max-w-[13rem] align-top">
           <div class="flex items-center gap-2 min-w-0">
-            <span class="min-w-0 truncate" title="${escapeHtmlAttr(b.wallet || '')}">${escapeHtmlAttr(b.wallet || '-')}</span>
+            <span class="min-w-0 flex-1 truncate" title="${escapeHtmlAttr(b.wallet || '')}">${escapeHtmlAttr(truncateWalletForDisplay(b.wallet || ''))}</span>
             ${b.wallet ? `<button type="button" class="bg-surface-1 border border-card px-2 py-0.5 rounded text-xs hover:border-kaspa-primary shrink-0" data-copy-text="${escapeHtmlAttr(b.wallet)}">Copy</button>` : ''}
           </div>
         </td>
