@@ -12,13 +12,16 @@ block_wait_time: 1000
 print_stats: true
 log_to_file: true
 health_check_port: ""
-web_dashboard_port: ":3030"
+# Dashboard + /metrics listen on 127.0.0.1 when you use :port only (safe on a home PC).
+# Use e.g. 0.0.0.0:3030 if you need the UI from another device on your network.
+web_dashboard_port: "0.0.0.0:3030"
 var_diff: true
 shares_per_min: 30
 var_diff_stats: true
 pow2_clamp: true
 extranonce_size: 2
 coinbase_tag_suffix: ""
+approximate_geo_lookup: true   # or CLI: --approximate-geo-lookup true (see bridge/docs/README.md)
 
 instances:
   - stratum_port: ":5559"

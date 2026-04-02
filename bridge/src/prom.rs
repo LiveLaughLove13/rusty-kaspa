@@ -10,7 +10,9 @@ use std::sync::OnceLock;
 use std::time::{Duration, Instant};
 
 use crate::app_config::BridgeConfig;
-use crate::net_utils::bind_addr_from_port;
+use crate::host_metrics::{geoip_effective, get_host_snapshot, host_metrics_compiled};
+use crate::kaspaapi::node_status_for_api;
+use crate::net_utils::bind_addr_for_operator_http;
 use std::path::PathBuf;
 
 /// Worker labels for Prometheus metrics
@@ -377,20 +379,44 @@ async fn handle_http_request(
     }
 
     if request.starts_with("GET /api/status") {
-        let kaspad_version = crate::kaspaapi::NODE_STATUS.lock().server_version.clone().unwrap_or_else(|| "-".to_string());
+        let node = node_status_for_api();
+        let kaspad_version = node.server_version.clone().unwrap_or_else(|| "-".to_string());
         let status_cfg = get_web_status_config();
         let web_bind = match mode {
             HttpMode::Aggregated { web_bind } => web_bind.clone(),
             HttpMode::Instance { web_bind, .. } => web_bind.clone(),
         };
 
-        let status =
-            WebStatusResponse { kaspad_address: status_cfg.kaspad_address, kaspad_version, instances: status_cfg.instances, web_bind };
+        let host = get_host_snapshot();
+        let status = WebStatusResponse {
+            kaspad_address: status_cfg.kaspad_address,
+            kaspad_version,
+            instances: status_cfg.instances,
+            web_bind,
+            host_metrics_enabled: host_metrics_compiled(),
+            geoip_enabled: geoip_effective(),
+            node,
+            host,
+        };
         let json = serde_json::to_string(&status).unwrap_or_else(|_| "{}".to_string());
         let response = format!(
             "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nAccess-Control-Allow-Origin: *\r\nContent-Length: {}\r\n\r\n{}",
             json.len(),
             json
+        );
+        stream.write_all(response.as_bytes()).await?;
+        return Ok(());
+    }
+
+    if request.starts_with("GET /api/host") {
+        let body = match get_host_snapshot() {
+            Some(h) => serde_json::to_string(&h).unwrap_or_else(|_| "{}".to_string()),
+            None => r#"{"available":false,"message":"Host metrics disabled (minimal build: omit --no-default-features or add --features rkstratum_host_metrics) or not yet collected"}"#.to_string(),
+        };
+        let response = format!(
+            "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nAccess-Control-Allow-Origin: *\r\nContent-Length: {}\r\n\r\n{}",
+            body.len(),
+            body
         );
         stream.write_all(response.as_bytes()).await?;
         return Ok(());
@@ -486,8 +512,9 @@ pub async fn start_web_server_all(port: &str) -> Result<(), Box<dyn std::error::
     use tokio::net::TcpListener;
 
     init_metrics();
+    crate::host_metrics::spawn_host_metrics_task();
 
-    let addr_str = bind_addr_from_port(port);
+    let addr_str = bind_addr_for_operator_http(port);
     let addr: SocketAddr = addr_str.parse()?;
     let listener = TcpListener::bind(addr).await?;
     let web_bind_for_status = addr_str.clone();
@@ -640,9 +667,17 @@ pub fn record_network_stats(hashrate: u64, block_count: u64, difficulty: f64) {
 #[derive(Serialize)]
 struct WebStatusResponse {
     kaspad_address: String,
+    /// Duplicates `node.serverVersion` for backward compatibility with older dashboards.
     kaspad_version: String,
     instances: usize,
     web_bind: String,
+    /// Whether the binary was built with `rkstratum_host_metrics`.
+    host_metrics_enabled: bool,
+    /// Geo-IP lookup is active (`rkstratum_geoip` + `approximate_geo_lookup` enabled via config, CLI, or API).
+    geoip_enabled: bool,
+    node: crate::kaspaapi::NodeStatusApi,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    host: Option<crate::host_metrics::HostSnapshot>,
 }
 
 #[derive(Clone, Debug)]
@@ -798,6 +833,10 @@ struct InternalCpuStats {
 #[allow(non_snake_case)]
 struct StatsResponse {
     totalBlocks: u64,
+    #[serde(default)]
+    totalBlocksAcceptedByNode: u64,
+    #[serde(default)]
+    totalBlocksNotConfirmedBlue: u64,
     totalShares: u64,
     networkHashrate: u64,
     networkDifficulty: f64,
@@ -830,7 +869,23 @@ struct WorkerInfo {
     shares: u64,
     stale: u64,
     invalid: u64,
+    #[serde(default, rename = "duplicateShares")]
+    duplicate_shares: u64,
+    #[serde(default, rename = "weakShares")]
+    weak_shares: u64,
     blocks: u64,
+    #[serde(default, rename = "disconnects")]
+    disconnects: u64,
+    #[serde(default, rename = "jobs")]
+    jobs: u64,
+    #[serde(default, skip_serializing_if = "Option::is_none", rename = "balanceKas")]
+    balance_kas: Option<f64>,
+    #[serde(default, rename = "errors")]
+    errors: u64,
+    #[serde(default, rename = "blocksAcceptedByNode")]
+    blocks_accepted_by_node: u64,
+    #[serde(default, rename = "blocksNotConfirmedBlue")]
+    blocks_not_confirmed_blue: u64,
     #[serde(skip_serializing_if = "Option::is_none", rename = "lastSeen")]
     last_seen: Option<u64>, // Unix timestamp in seconds
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -858,6 +913,32 @@ fn parse_worker_labels(labels: &[prometheus::proto::LabelPair]) -> (String, Stri
     (instance, worker, wallet)
 }
 
+fn parse_instance_wallet_labels(labels: &[prometheus::proto::LabelPair]) -> (String, String) {
+    let mut instance = String::new();
+    let mut wallet = String::new();
+    for label in labels {
+        match label.get_name() {
+            "instance" => instance = label.get_value().to_string(),
+            "wallet" => wallet = label.get_value().to_string(),
+            _ => {}
+        }
+    }
+    (instance, wallet)
+}
+
+fn sum_prometheus_counter_family(families: &[MetricFamily], name: &str) -> u64 {
+    let mut sum = 0u64;
+    for family in families {
+        if family.get_name() != name {
+            continue;
+        }
+        for m in family.get_metric() {
+            sum = sum.saturating_add(m.get_counter().get_value().max(0.0) as u64);
+        }
+    }
+    sum
+}
+
 fn new_worker_info(instance: String, worker: String, wallet: String) -> WorkerInfo {
     WorkerInfo {
         instance,
@@ -867,7 +948,15 @@ fn new_worker_info(instance: String, worker: String, wallet: String) -> WorkerIn
         shares: 0,
         stale: 0,
         invalid: 0,
+        duplicate_shares: 0,
+        weak_shares: 0,
         blocks: 0,
+        disconnects: 0,
+        jobs: 0,
+        balance_kas: None,
+        errors: 0,
+        blocks_accepted_by_node: 0,
+        blocks_not_confirmed_blue: 0,
         last_seen: None,
         status: None,
         current_difficulty: None,
@@ -889,6 +978,8 @@ async fn get_stats_json_filtered(instance_id: Option<&str>) -> StatsResponse {
     };
     let mut stats = StatsResponse {
         totalBlocks: 0,
+        totalBlocksAcceptedByNode: 0,
+        totalBlocksNotConfirmedBlue: 0,
         totalShares: 0,
         networkHashrate: 0,
         networkDifficulty: 0.0,
@@ -904,6 +995,8 @@ async fn get_stats_json_filtered(instance_id: Option<&str>) -> StatsResponse {
     let mut worker_hash_values: HashMap<String, f64> = HashMap::new(); // Store hash values for hashrate calculation
     let mut worker_start_times: HashMap<String, f64> = HashMap::new(); // Store start times for hashrate calculation
     let mut worker_difficulties: HashMap<String, f64> = HashMap::new(); // Store current difficulty for each worker
+    let mut balance_by_instance_wallet: HashMap<String, f64> = HashMap::new();
+    let mut errors_by_instance_wallet: HashMap<String, u64> = HashMap::new();
     let mut block_set: HashSet<String> = HashSet::new();
 
     // Parse global network gauges from the unfiltered set.
@@ -993,7 +1086,7 @@ async fn get_stats_json_filtered(instance_id: Option<&str>) -> StatsResponse {
         }
     }
 
-    for family in families_for_workers_and_blocks {
+    for family in &families_for_workers_and_blocks {
         let name = family.get_name();
 
         // Parse block gauge
@@ -1107,7 +1200,81 @@ async fn get_stats_json_filtered(instance_id: Option<&str>) -> StatsResponse {
                         worker.stale = worker.stale.saturating_add(count);
                     } else if share_type == "invalid" {
                         worker.invalid = worker.invalid.saturating_add(count);
+                    } else if share_type == "duplicate" {
+                        worker.duplicate_shares = worker.duplicate_shares.saturating_add(count);
+                    } else if share_type == "weak" {
+                        worker.weak_shares = worker.weak_shares.saturating_add(count);
                     }
+                }
+            }
+        }
+
+        if name == "ks_worker_disconnect_counter" {
+            for metric in family.get_metric() {
+                let (instance, worker_key, wallet) = parse_worker_labels(metric.get_label());
+                if !worker_key.is_empty() {
+                    let key = format!("{}:{}:{}", instance, worker_key, wallet);
+                    let count = metric.get_counter().get_value().max(0.0) as u64;
+                    let entry = worker_stats.entry(key.clone()).or_insert_with(|| new_worker_info(instance, worker_key, wallet));
+                    entry.disconnects = entry.disconnects.saturating_add(count);
+                }
+            }
+        }
+
+        if name == "ks_worker_job_counter" {
+            for metric in family.get_metric() {
+                let (instance, worker_key, wallet) = parse_worker_labels(metric.get_label());
+                if !worker_key.is_empty() {
+                    let key = format!("{}:{}:{}", instance, worker_key, wallet);
+                    let count = metric.get_counter().get_value().max(0.0) as u64;
+                    let entry = worker_stats.entry(key.clone()).or_insert_with(|| new_worker_info(instance, worker_key, wallet));
+                    entry.jobs = entry.jobs.saturating_add(count);
+                }
+            }
+        }
+
+        if name == "ks_blocks_accepted_by_node" {
+            for metric in family.get_metric() {
+                let (instance, worker_key, wallet) = parse_worker_labels(metric.get_label());
+                if !worker_key.is_empty() {
+                    let key = format!("{}:{}:{}", instance, worker_key, wallet);
+                    let count = metric.get_counter().get_value().max(0.0) as u64;
+                    let entry = worker_stats.entry(key.clone()).or_insert_with(|| new_worker_info(instance, worker_key, wallet));
+                    entry.blocks_accepted_by_node = entry.blocks_accepted_by_node.saturating_add(count);
+                }
+            }
+        }
+
+        if name == "ks_blocks_not_confirmed_blue" {
+            for metric in family.get_metric() {
+                let (instance, worker_key, wallet) = parse_worker_labels(metric.get_label());
+                if !worker_key.is_empty() {
+                    let key = format!("{}:{}:{}", instance, worker_key, wallet);
+                    let count = metric.get_counter().get_value().max(0.0) as u64;
+                    let entry = worker_stats.entry(key.clone()).or_insert_with(|| new_worker_info(instance, worker_key, wallet));
+                    entry.blocks_not_confirmed_blue = entry.blocks_not_confirmed_blue.saturating_add(count);
+                }
+            }
+        }
+
+        if name == "ks_balance_by_wallet_gauge" {
+            for metric in family.get_metric() {
+                let (instance, wallet) = parse_instance_wallet_labels(metric.get_label());
+                if !wallet.is_empty() {
+                    let map_key = format!("{instance}:{wallet}");
+                    balance_by_instance_wallet.insert(map_key, metric.get_gauge().get_value());
+                }
+            }
+        }
+
+        if name == "ks_worker_errors" {
+            for metric in family.get_metric() {
+                let (instance, wallet) = parse_instance_wallet_labels(metric.get_label());
+                if !wallet.is_empty() {
+                    let map_key = format!("{instance}:{wallet}");
+                    let count = metric.get_counter().get_value().max(0.0) as u64;
+                    let e = errors_by_instance_wallet.entry(map_key).or_insert(0);
+                    *e = e.saturating_add(count);
                 }
             }
         }
@@ -1157,6 +1324,27 @@ async fn get_stats_json_filtered(instance_id: Option<&str>) -> StatsResponse {
                     // Ensure worker exists in stats
                     worker_stats.entry(key.clone()).or_insert_with(|| new_worker_info(instance, worker_key, wallet));
                 }
+            }
+        }
+    }
+
+    stats.totalBlocksAcceptedByNode =
+        sum_prometheus_counter_family(families_for_workers_and_blocks.as_slice(), "ks_blocks_accepted_by_node");
+    stats.totalBlocksNotConfirmedBlue =
+        sum_prometheus_counter_family(families_for_workers_and_blocks.as_slice(), "ks_blocks_not_confirmed_blue");
+
+    for (key, w) in worker_stats.iter_mut() {
+        let mut it = key.splitn(3, ':');
+        let inst = it.next().unwrap_or("");
+        let _worker_name = it.next();
+        let wal = it.next().unwrap_or("");
+        if !wal.is_empty() {
+            let iw = format!("{inst}:{wal}");
+            if let Some(&bal) = balance_by_instance_wallet.get(&iw) {
+                w.balance_kas = Some(bal);
+            }
+            if let Some(&err) = errors_by_instance_wallet.get(&iw) {
+                w.errors = err;
             }
         }
     }
@@ -1357,6 +1545,7 @@ async fn get_config_json() -> String {
             "var_diff_stats": config.global.var_diff_stats,
             "extranonce_size": config.global.extranonce_size,
             "pow2_clamp": config.global.pow2_clamp,
+            "approximate_geo_lookup": config.global.approximate_geo_lookup,
             "coinbase_tag_suffix": config.global.coinbase_tag_suffix,
             // Instance fields (from first instance for backward compatibility)
             "stratum_port": first_instance.map(|i| &i.stratum_port),
@@ -1428,6 +1617,10 @@ async fn update_config_from_json(json_body: &str) -> Result<(), Box<dyn std::err
             config.global.coinbase_tag_suffix = if trimmed.is_empty() { None } else { Some(trimmed.to_string()) };
         }
     }
+    if let Some(geo) = updates.get("approximate_geo_lookup").and_then(|v| v.as_bool()) {
+        config.global.approximate_geo_lookup = geo;
+        crate::host_metrics::set_geoip_enabled_from_config(geo);
+    }
 
     // Update first instance fields if provided (for single-instance mode compatibility)
     if config.instances.is_empty() {
@@ -1467,10 +1660,11 @@ pub async fn start_prom_server(port: &str, instance_id: &str) -> Result<(), Box<
     use tokio::net::TcpListener;
 
     init_metrics();
+    crate::host_metrics::spawn_host_metrics_task();
 
     let instance_id = instance_id.to_string();
 
-    let addr_str = bind_addr_from_port(port);
+    let addr_str = bind_addr_for_operator_http(port);
 
     let addr: SocketAddr = addr_str.parse()?;
     let listener = TcpListener::bind(addr).await?;
@@ -1529,6 +1723,8 @@ min_share_diff: 8192
         assert!(status_resp.contains("200 OK"));
         assert!(status_resp.contains("\"kaspad_address\""));
         assert!(status_resp.contains("\"instances\":2"));
+        assert!(status_resp.contains("\"host_metrics_enabled\""));
+        assert!(status_resp.contains("\"geoip_enabled\""));
 
         let stats_resp = send_request(mode.clone(), "GET /api/stats HTTP/1.1\r\n\r\n").await;
         assert!(stats_resp.contains("200 OK"));

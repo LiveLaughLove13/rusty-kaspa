@@ -11,30 +11,32 @@
   <link rel="stylesheet" href="static/css/site.css">
 </head>
 <body>
-  <nav class="bg-surface-1 border-b border-card relative">
-    <div class="container mx-auto px-4 py-4">
-      <div class="flex items-center justify-between">
-        <h1 class="text-2xl font-bold kaspa-primary flex items-center gap-3">
-          <img src="static/assets/kaspa.svg" alt="Kaspa" class="rk-logo h-9 w-auto" />
-          <span>RK-Stratum</span>
-        </h1>
-        <div class="flex items-center gap-2 sm:gap-4">
-          <div class="flex items-center space-x-2 sm:space-x-3">
+  <nav class="rk-main-nav border-b border-card relative rounded-b-2xl shadow-lg shadow-black/25">
+    <div class="container mx-auto px-4 sm:px-5 py-4 sm:py-5 max-w-[1680px]">
+      <div class="rk-nav-top flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+        <div class="rk-nav-brand flex items-center gap-3 min-w-0">
+          <span class="rk-nav-brand-mark" aria-hidden="true"></span>
+          <h1 class="text-xl sm:text-2xl font-bold kaspa-primary flex items-center gap-3 tracking-tight min-w-0">
+            <img src="static/assets/kaspa.svg" alt="" class="rk-logo h-8 w-auto sm:h-9 shrink-0" width="36" height="36" aria-hidden="true" />
+            <span class="truncate rk-nav-brand-text">RK-Stratum</span>
+          </h1>
+        </div>
+        <div class="rk-nav-top-meta flex flex-wrap items-center gap-2 sm:gap-3">
+          <div class="rk-nav-status-pill flex items-center gap-2 sm:gap-2.5 px-3 py-2 rounded-xl border border-white/[0.08] bg-black/20">
             <div class="loader" id="status-loader"></div>
-            <span id="status-text" class="status-dot status-dot--loading" title="Loading"></span>
+            <span id="status-text" class="status-dot status-dot--loading shrink-0" title="Loading"></span>
+            <span id="statusLabel" class="text-xs sm:text-sm font-medium text-slate-300 tabular-nums">Loading…</span>
           </div>
-          <div class="flex items-center gap-2 sm:gap-3">
-            <div class="bg-surface-2 border border-card px-2 py-1.5 sm:px-4 sm:py-2 rounded-lg text-xs sm:text-sm">
-              <div class="text-[10px] sm:text-xs text-gray-400">Server Time</div>
-              <div id="serverTime" class="text-white font-semibold tabular-nums text-[10px] sm:text-sm leading-tight">-</div>
-            </div>
+          <div class="rk-nav-clock px-3 py-2 sm:px-4 sm:py-2.5 rounded-xl border border-[rgba(112,199,186,0.2)] bg-gradient-to-br from-slate-900/80 to-slate-950/90 shadow-inner">
+            <div class="text-[10px] sm:text-[11px] font-medium uppercase tracking-wider text-[rgba(112,199,186,0.75)]">Local time</div>
+            <div id="serverTime" class="text-white font-semibold tabular-nums text-[11px] sm:text-sm leading-snug mt-0.5">-</div>
           </div>
-          <div class="hidden md:flex items-center gap-2">
-            <a class="bg-surface-2 border border-card px-4 py-2 rounded-full text-sm font-medium text-white hover:border-kaspa-primary flex items-center gap-2" href="raw.html">Raw</a>
-            <a class="bg-kaspa-primary hover-bg-kaspa-primary px-4 py-2 rounded-full text-sm font-medium text-white flex items-center gap-2"
+          <div class="flex items-center gap-2 w-full sm:w-auto sm:ml-auto lg:ml-0">
+            <a class="rk-nav-cta rk-nav-cta--ghost" href="raw.html">Raw</a>
+            <a class="rk-nav-cta rk-nav-cta--primary"
                href="https://github.com/kaspanet" target="_blank" rel="noopener noreferrer">
               <span aria-hidden="true">
-                <svg viewBox="0 0 24 24" class="h-4 w-4" fill="currentColor"><path d="M12 .297a12 12 0 0 0-3.793 23.405c.6.111.793-.261.793-.58v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.757-1.333-1.757-1.089-.745.083-.73.083-.73 1.205.084 1.84 1.237 1.84 1.237 1.07 1.835 2.809 1.305 3.495.998.108-.776.418-1.305.762-1.604-2.665-.3-5.466-1.334-5.466-5.932 0-1.31.468-2.381 1.235-3.221-.123-.303-.535-1.523.117-3.176 0 0 1.008-.322 3.301 1.23a11.52 11.52 0 0 1 6.003 0c2.29-1.552 3.297-1.23 3.297-1.23.654 1.653.242 2.873.119 3.176.77.84 1.233 1.911 1.233 3.221 0 4.61-2.807 5.628-5.479 5.922.43.372.823 1.102.823 2.222v3.293c0 .322.192.694.801.576A12 12 0 0 0 12 .297z"/></svg>
+                <svg viewBox="0 0 24 24" class="h-4 w-4 shrink-0" fill="currentColor"><path d="M12 .297a12 12 0 0 0-3.793 23.405c.6.111.793-.261.793-.58v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.757-1.333-1.757-1.089-.745.083-.73.083-.73 1.205.084 1.84 1.237 1.84 1.237 1.07 1.835 2.809 1.305 3.495.998.108-.776.418-1.305.762-1.604-2.665-.3-5.466-1.334-5.466-5.932 0-1.31.468-2.381 1.235-3.221-.123-.303-.535-1.523.117-3.176 0 0 1.008-.322 3.301 1.23a11.52 11.52 0 0 1 6.003 0c2.29-1.552 3.297-1.23 3.297-1.23.654 1.653.242 2.873.119 3.176.77.84 1.233 1.911 1.233 3.221 0 4.61-2.807 5.628-5.479 5.922.43.372.823 1.102.823 2.222v3.293c0 .322.192.694.801.576A12 12 0 0 0 12 .297z"/></svg>
               </span>
               GitHub
             </a>
@@ -42,78 +44,111 @@
         </div>
       </div>
 
-      <div class="mt-4 grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-8 gap-3">
-      <div class="bg-surface-2 rounded-lg px-4 py-2 border border-card min-w-0">
-        <div class="text-gray-400 text-xs">Total Blocks</div>
-        <div id="totalBlocks" class="text-base font-semibold tabular-nums leading-tight truncate">-</div>
+      <section class="rk-nav-section mt-5" aria-labelledby="rk-nav-bridge-heading">
+        <h2 id="rk-nav-bridge-heading" class="rk-nav-section__label">Bridge</h2>
+        <div class="mt-2 flex flex-col gap-3 lg:flex-row lg:items-stretch lg:justify-between lg:gap-4">
+        <div class="rk-header-bridge-grid flex-1 min-w-0" aria-label="Bridge status">
+          <div class="bg-surface-2 px-3 py-2.5 border border-card min-w-0 rk-stat-card">
+            <div class="rk-stat-card-head">
+              <div class="text-gray-400 text-[11px] uppercase tracking-wide">Kaspad version</div>
+            </div>
+            <div id="kaspadVersion" class="text-base font-semibold tabular-nums leading-tight truncate kaspa-primary">-</div>
+          </div>
+          <div class="bg-surface-2 px-3 py-2.5 border border-card min-w-0 rk-stat-card rk-stat-card--accent">
+            <div class="rk-stat-card-head">
+              <div class="text-gray-400 text-[11px] uppercase tracking-wide">Instances</div>
+            </div>
+            <div id="instances" class="text-base font-semibold tabular-nums leading-tight truncate">-</div>
+          </div>
+          <div class="bg-surface-2 px-3 py-2.5 border border-card min-w-0 rk-stat-card">
+            <div class="rk-stat-card-head">
+              <div class="text-gray-400 text-[11px] uppercase tracking-wide">Last update</div>
+            </div>
+            <div id="lastUpdated" class="text-sm font-semibold leading-tight text-gray-100 line-clamp-2 sm:line-clamp-1 sm:truncate">-</div>
+          </div>
+          <div class="bg-surface-2 px-3 py-2.5 border border-card min-w-0 rk-stat-card rk-stat-card--accent">
+            <div class="rk-stat-card-head">
+              <div class="text-gray-400 text-[11px] uppercase tracking-wide">Bridge uptime</div>
+            </div>
+            <div id="bridgeUptime" class="text-base font-semibold tabular-nums leading-tight truncate">-</div>
+          </div>
+        </div>
+        <div class="rk-header-actions flex flex-wrap items-stretch gap-2 shrink-0 lg:flex-col lg:justify-center lg:min-w-[10rem]">
+          <button type="button" id="refreshBtn" class="rk-btn-header rk-btn-header--primary w-full sm:w-auto lg:w-full">Refresh</button>
+          <button type="button" id="clearCacheBtn" class="rk-btn-header rk-btn-header--ghost w-full sm:w-auto lg:w-full">Clear cache</button>
+        </div>
+        </div>
+      </section>
+
+      <section class="rk-nav-section mt-6" aria-labelledby="rk-nav-mining-heading">
+        <h2 id="rk-nav-mining-heading" class="rk-nav-section__label">Mining &amp; network</h2>
+        <div class="rk-stats-grid mt-2">
+      <div class="bg-surface-2 px-3 py-2.5 border border-card min-w-0 rk-stat-card">
+        <div class="rk-stat-card-head">
+          <div class="text-gray-400 text-[11px] uppercase tracking-wide">Blocks mined</div>
+        </div>
+        <div id="totalBlocks" class="text-base font-semibold tabular-nums leading-tight truncate kaspa-primary">-</div>
+        <div id="blockTotalsSub" class="text-[10px] text-gray-500 tabular-nums leading-tight mt-0.5 truncate" title="Prometheus totals (same instance filter as /metrics)"></div>
       </div>
-      <div class="bg-surface-2 rounded-lg px-4 py-2 border border-card min-w-0">
-        <div class="text-gray-400 text-xs">Total Shares</div>
+      <div class="bg-surface-2 px-3 py-2.5 border border-card min-w-0 rk-stat-card rk-stat-card--accent">
+        <div class="rk-stat-card-head">
+          <div class="text-gray-400 text-[11px] uppercase tracking-wide">Total shares</div>
+        </div>
         <div id="totalShares" class="text-base font-semibold tabular-nums leading-tight truncate">-</div>
       </div>
-      <div class="bg-surface-2 rounded-lg px-4 py-2 border border-card min-w-0">
-        <div class="text-gray-400 text-xs">Active Workers</div>
-        <div class="flex items-baseline gap-2">
+      <div class="bg-surface-2 px-3 py-2.5 border border-card min-w-0 rk-stat-card rk-stat-card--accent">
+        <div class="rk-stat-card-head">
+          <div class="text-gray-400 text-[11px] uppercase tracking-wide">Active workers</div>
+        </div>
+        <div class="flex items-baseline gap-2 min-w-0">
           <div id="activeWorkers" class="text-base font-semibold tabular-nums leading-tight truncate">-</div>
           <div id="totalWorkerHashrate" class="text-xs text-gray-400 tabular-nums truncate"></div>
         </div>
       </div>
-      <div class="bg-surface-2 rounded-lg px-4 py-2 border border-card min-w-0">
-        <div class="text-gray-400 text-xs">Network Hashrate</div>
+      <div class="bg-surface-2 px-3 py-2.5 border border-card min-w-0 rk-stat-card">
+        <div class="rk-stat-card-head">
+          <div class="text-gray-400 text-[11px] uppercase tracking-wide">Network hashrate</div>
+        </div>
         <div id="networkHashrate" class="text-base font-semibold tabular-nums leading-tight truncate">-</div>
       </div>
-      <div class="bg-surface-2 rounded-lg px-4 py-2 border border-card min-w-0">
-        <div class="text-gray-400 text-xs">RKStratum CPU Miner Hashrate</div>
+      <div class="bg-surface-2 px-3 py-2.5 border border-card min-w-0 rk-stat-card">
+        <div class="rk-stat-card-head">
+          <div class="text-gray-400 text-[11px] uppercase tracking-wide leading-snug">CPU miner hashrate</div>
+        </div>
         <div id="internalCpuHashrate" class="text-base font-semibold tabular-nums leading-tight truncate">-</div>
       </div>
-      <div class="bg-surface-2 rounded-lg px-4 py-2 border border-card min-w-0">
-        <div class="text-gray-400 text-xs">RKStratum CPU Miner Blocks</div>
+      <div class="bg-surface-2 px-3 py-2.5 border border-card min-w-0 rk-stat-card">
+        <div class="rk-stat-card-head">
+          <div class="text-gray-400 text-[11px] uppercase tracking-wide leading-snug">CPU miner blocks</div>
+        </div>
         <div id="internalCpuBlocks" class="text-base font-semibold tabular-nums leading-tight truncate">-</div>
       </div>
-      <div class="bg-surface-2 rounded-lg px-4 py-2 border border-card min-w-0">
-        <div class="text-gray-400 text-xs">Network Difficulty</div>
-        <div id="networkDifficulty" class="text-base font-semibold tabular-nums leading-tight truncate">-</div>
+      <div class="bg-surface-2 px-3 py-2.5 border border-card min-w-0 rk-stat-card">
+        <div class="rk-stat-card-head">
+          <div class="text-gray-400 text-[11px] uppercase tracking-wide leading-snug">Network difficulty</div>
+          <div class="text-[10px] text-gray-500 leading-tight">Prometheus / est.</div>
+        </div>
+        <div id="networkDifficulty" class="text-sm font-semibold tabular-nums leading-tight truncate">-</div>
       </div>
-      <div class="bg-surface-2 rounded-lg px-4 py-2 border border-card min-w-0">
-        <div class="text-gray-400 text-xs">Network Height</div>
+      <div class="bg-surface-2 px-3 py-2.5 border border-card min-w-0 rk-stat-card">
+        <div class="rk-stat-card-head">
+          <div class="text-gray-400 text-[11px] uppercase tracking-wide">DAG height</div>
+          <div class="text-[10px] text-gray-500 leading-tight">Metrics gauge</div>
+        </div>
         <div id="networkBlockCount" class="text-base font-semibold tabular-nums leading-tight truncate">-</div>
       </div>
-    </div>
+        </div>
+      </section>
     </div>
   </nav>
 
-  <div class="container mx-auto px-4 py-8">
-    <div class="grid grid-cols-1 xl:grid-cols-12 gap-6 items-start mb-8">
-      <div class="xl:col-span-6 space-y-6">
-        <div class="bg-surface-1 rounded-lg p-6 border border-card">
-          <div class="flex items-center justify-between gap-4 mb-4">
-            <h3 class="text-lg font-semibold kaspa-primary">Status</h3>
-            <button type="button" class="bg-surface-2 border border-card px-3 py-1.5 rounded-lg text-xs font-medium text-white hover:border-kaspa-primary flex items-center gap-2" data-collapsible-toggle="status" aria-expanded="true">
-              <svg class="h-4 w-4 transition-transform" data-collapsible-icon="status" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M5.23 7.21a.75.75 0 0 1 1.06.02L10 10.94l3.71-3.71a.75.75 0 1 1 1.06 1.06l-4.24 4.24a.75.75 0 0 1-1.06 0L5.21 8.29a.75.75 0 0 1 .02-1.08z" clip-rule="evenodd"/></svg>
-              <span data-collapsible-label="status">Collapse</span>
-            </button>
-          </div>
-          <div data-collapsible-body="status">
-            <div class="space-y-2 text-sm">
-            <div class="flex justify-between"><span class="text-gray-400">Kaspad Version</span><span id="kaspadVersion">-</span></div>
-            <div class="flex justify-between"><span class="text-gray-400">Instances</span><span id="instances">-</span></div>
-            <div class="flex justify-between"><span class="text-gray-400">Last Update</span><span id="lastUpdated">-</span></div>
-            <div class="flex justify-between"><span class="text-gray-400">Bridge Uptime</span><span id="bridgeUptime">-</span></div>
-          </div>
-          </div>
-          <div class="mt-4 flex gap-3">
-            <button id="refreshBtn" class="bg-kaspa-primary hover-bg-kaspa-primary px-6 py-2 rounded-lg text-sm font-medium text-white">
-              Refresh
-            </button>
-            <button id="clearCacheBtn" class="bg-surface-2 border border-card px-6 py-2 rounded-lg text-sm font-medium text-white hover:border-kaspa-primary">
-              Clear Cache
-            </button>
-          </div>
-        </div>
-
-        <div class="bg-surface-1 rounded-lg p-6 border border-card">
+  <div class="container mx-auto px-4 py-8 max-w-[1680px]">
+    <div class="grid grid-cols-1 xl:grid-cols-12 gap-6 xl:gap-6 items-start mb-8">
+      <!-- Left rail: wallet / endpoints (bridge status is in the main header) -->
+      <div class="xl:col-span-3 space-y-6 xl:pr-2 xl:border-r border-transparent xl:border-card/50">
+        <div class="bg-surface-1 rounded-xl p-5 sm:p-6 border border-card rk-panel-elevated">
         <div class="flex items-center justify-between gap-4 mb-4">
-          <h3 class="text-lg font-semibold kaspa-primary">Metrics</h3>
+          <h3 class="text-lg font-semibold kaspa-primary rk-panel-title">Metrics</h3>
           <button type="button" class="bg-surface-2 border border-card px-3 py-1.5 rounded-lg text-xs font-medium text-white hover:border-kaspa-primary flex items-center gap-2" data-collapsible-toggle="metrics" aria-expanded="true">
             <svg class="h-4 w-4 transition-transform" data-collapsible-icon="metrics" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M5.23 7.21a.75.75 0 0 1 1.06.02L10 10.94l3.71-3.71a.75.75 0 1 1 1.06 1.06l-4.24 4.24a.75.75 0 0 1-1.06 0L5.21 8.29a.75.75 0 0 1 .02-1.08z" clip-rule="evenodd"/></svg>
             <span data-collapsible-label="metrics">Collapse</span>
@@ -121,51 +156,333 @@
         </div>
 
         <div class="pt-2">
-          <label class="text-gray-400">Wallet Search</label>
-          <div class="mt-1 flex items-center gap-2">
+          <label class="text-gray-400 text-sm">Wallet search</label>
+          <div class="mt-1 flex flex-col gap-2 sm:flex-row sm:items-center sm:flex-wrap">
             <input id="walletSearchInput" type="text" placeholder="kaspa:..." autocomplete="off"
-              class="w-full px-4 py-2 bg-surface-2 border border-card rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-kaspa-primary" />
+              class="w-full min-w-0 px-4 py-2 bg-surface-2 border border-card rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-kaspa-primary" />
+            <div class="flex gap-2 shrink-0">
             <button id="walletSearchBtn" type="button" class="bg-kaspa-primary hover-bg-kaspa-primary px-4 py-2 rounded-lg text-sm font-medium text-white">Search</button>
             <button id="walletClearBtn" type="button" class="bg-surface-2 border border-card px-4 py-2 rounded-lg text-sm font-medium text-white hover:border-kaspa-primary">Clear</button>
+            </div>
           </div>
           <input id="walletFilter" type="hidden" />
           <div id="walletSummary" class="mt-3 hidden bg-surface-2 border border-card rounded-lg px-4 py-3"></div>
         </div>
 
-        <div class="text-sm text-gray-300 space-y-2" data-collapsible-body="metrics">
-          <div>Prometheus endpoint: <a class="kaspa-primary" href="metrics" target="_blank">metrics</a></div>
-          <div>JSON stats endpoint: <code class="text-white">/api/stats</code></div>
+        <div class="text-sm text-gray-400 space-y-1.5" data-collapsible-body="metrics">
+          <div><a class="kaspa-primary hover:underline" href="metrics" target="_blank" rel="noopener noreferrer">/metrics</a> (Prometheus) · <code class="text-gray-300">/api/stats</code> (JSON)</div>
+          <div class="text-xs text-gray-500">Prometheus setup and copy-paste scrape config: <strong class="text-gray-400 font-medium">Trends</strong> → <strong class="text-gray-400 font-medium">Long range</strong>.</div>
         </div>
       </div>
       </div>
 
-      <div class="bg-surface-2 rounded-lg p-6 border border-card xl:col-span-6">
-        <div class="flex items-center justify-between gap-4 mb-4">
-          <h3 class="text-lg font-semibold kaspa-primary">Blocks Mined</h3>
-          <div class="flex items-center gap-3">
-            <div class="text-xs text-gray-400">Distribution by worker (filtered by wallet if set)</div>
-            <button type="button" class="bg-surface-1 border border-card px-3 py-1.5 rounded-lg text-xs font-medium text-white hover:border-kaspa-primary flex items-center gap-2" data-collapsible-toggle="blocksMined" aria-expanded="true">
-              <svg class="h-4 w-4 transition-transform" data-collapsible-icon="blocksMined" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M5.23 7.21a.75.75 0 0 1 1.06.02L10 10.94l3.71-3.71a.75.75 0 1 1 1.06 1.06l-4.24 4.24a.75.75 0 0 1-1.06 0L5.21 8.29a.75.75 0 0 1 .02-1.08z" clip-rule="evenodd"/></svg>
-              <span data-collapsible-label="blocksMined">Collapse</span>
+      <!-- Center: kaspad node (full width of former blocks column merged in) -->
+      <div class="xl:col-span-9 space-y-6 xl:px-1">
+        <div class="bg-surface-1 rounded-xl p-5 sm:p-6 border border-card rk-panel-elevated h-full min-h-0">
+          <div class="flex flex-wrap items-start justify-between gap-3 mb-4">
+            <div class="flex flex-wrap items-center gap-2 sm:gap-3 min-w-0">
+              <h3 class="text-lg font-semibold kaspa-primary rk-panel-title">Kaspad node</h3>
+              <span id="nodeSyncPill" class="rk-pill rk-pill--unknown shrink-0"><span id="nodeSync">-</span></span>
+            </div>
+            <button type="button" class="bg-surface-2 border border-card px-3 py-1.5 rounded-lg text-xs font-medium text-white hover:border-kaspa-primary flex items-center gap-2 shrink-0" data-collapsible-toggle="node" aria-expanded="true">
+              <svg class="h-4 w-4 transition-transform" data-collapsible-icon="node" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M5.23 7.21a.75.75 0 0 1 1.06.02L10 10.94l3.71-3.71a.75.75 0 1 1 1.06 1.06l-4.24 4.24a.75.75 0 0 1-1.06 0L5.21 8.29a.75.75 0 0 1 .02-1.08z" clip-rule="evenodd"/></svg>
+              <span data-collapsible-label="node">Collapse</span>
             </button>
           </div>
-        </div>
-        <div data-collapsible-body="blocksMined">
-          <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <div class="flex items-center justify-center">
-              <div id="blocksPie" class="w-72 h-72"></div>
-            </div>
-            <div>
-              <div id="blocksPieLegend" class="space-y-2 text-sm"></div>
+          <div id="nodePanelError" class="hidden mb-3 text-sm text-amber-400 border border-amber-500/40 rounded-lg px-3 py-2"></div>
+          <div data-collapsible-body="node">
+            <div class="space-y-3 text-sm">
+              <div class="flex justify-between gap-2 items-center py-1.5 border-b border-card/50"><span class="text-gray-400 shrink-0 text-xs uppercase tracking-wide">RPC</span><span id="nodeConnection" class="text-right min-w-0 font-medium">-</span></div>
+              <div class="flex justify-between gap-2 items-center py-1.5 border-b border-card/50"><span class="text-gray-400 shrink-0 text-xs uppercase tracking-wide">Network</span><span id="nodeNetwork" class="text-right min-w-0 break-all font-medium">-</span></div>
+              <div class="grid grid-cols-2 gap-2">
+                <div class="rk-node-tile"><div class="rk-node-tile__label">DAG blocks</div><div id="nodeDagBlocks" class="rk-node-tile__value">-</div></div>
+                <div class="rk-node-tile"><div class="rk-node-tile__label">Headers</div><div id="nodeHeaders" class="rk-node-tile__value">-</div></div>
+                <div class="rk-node-tile"><div class="rk-node-tile__label">Peers</div><div id="nodePeers" class="rk-node-tile__value">-</div></div>
+                <div class="rk-node-tile"><div class="rk-node-tile__label">Virtual DAA</div><div id="nodeDaa" class="rk-node-tile__value">-</div></div>
+                <div class="rk-node-tile"><div class="rk-node-tile__label">Sink blue</div><div id="nodeSinkBlue" class="rk-node-tile__value">-</div></div>
+                <div
+                  class="rk-node-tile cursor-help"
+                  title="From kaspad (GetInfo): number of transactions currently in this node’s mempool. It moves up and down with network and wallet traffic. Mining blocks through the bridge does not bulk-fill the mempool."
+                >
+                  <div class="rk-node-tile__label">Mempool</div>
+                  <div id="nodeMempool" class="rk-node-tile__value">-</div>
+                </div>
+              </div>
+              <div class="space-y-1 pt-1">
+                <div class="flex justify-between text-[11px] text-gray-500"><span>Header / DAG alignment</span><span id="nodeSyncHealthPct">-</span></div>
+                <div class="rk-progress-track" aria-hidden="true"><div id="nodeSyncHealthBar" class="rk-progress-fill rk-progress-fill--sync" style="width:0%"></div></div>
+              </div>
+              <div class="flex justify-between gap-2 items-baseline pt-1"><span class="text-gray-400 shrink-0 text-xs uppercase tracking-wide">Difficulty (RPC)</span><span id="nodeDifficultyRpc" class="text-right tabular-nums font-semibold kaspa-primary">-</span></div>
+              <p id="nodeDifficultyHint" class="text-xs text-gray-500 leading-relaxed hidden -mt-0.5 max-w-prose"></p>
+              <div class="space-y-1.5 pt-1 border-t border-card/40">
+                <div class="text-gray-400 text-xs uppercase tracking-wide">Tip hash</div>
+                <div class="flex flex-col gap-2 sm:flex-row sm:items-start sm:gap-3 min-w-0">
+                  <span id="nodeTip" class="font-mono text-xs text-gray-200 min-w-0 w-full break-all [overflow-wrap:anywhere] leading-relaxed">-</span>
+                  <button type="button" id="nodeTipCopy" class="hidden bg-surface-2 border border-card px-2 py-0.5 rounded text-xs hover:border-kaspa-primary shrink-0 self-start sm:mt-0.5" title="Copy tip hash">Copy</button>
+                </div>
+              </div>
+              <div class="flex justify-between gap-2 text-xs"><span class="text-gray-500">Node snapshot</span><span id="nodePollAge" class="text-right text-gray-500">-</span></div>
             </div>
           </div>
         </div>
       </div>
     </div>
 
-    <div class="bg-surface-2 rounded-lg p-4 sm:p-6 border border-card mb-8 xl:col-span-12">
+    <div class="bg-surface-2 rounded-xl p-4 sm:p-6 border border-card mb-8 xl:col-span-12 rk-panel-chart rk-trends-panel">
+      <div class="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4 mb-4">
+        <div>
+          <h3 class="text-lg font-semibold kaspa-primary rk-panel-title">Trends &amp; analytics</h3>
+          <p id="trendsIntroText" class="text-xs text-gray-500 mt-1 max-w-3xl leading-relaxed">
+            Session: live charts (~2s refresh; cleared when this tab closes). Long range: Prometheus scrape helpers and optional embed. Bridge status is in the <strong class="text-gray-400 font-medium">header</strong>; host metrics and processes are in <strong class="text-gray-400 font-medium">Bridge host</strong> below.
+          </p>
+        </div>
+        <div class="flex flex-wrap items-center gap-2 shrink-0">
+          <div class="flex rounded-lg border border-card overflow-hidden bg-surface-1 p-0.5" role="group" aria-label="Trends data source">
+            <button type="button" id="trendsViewSessionBtn" class="rk-trends-view-btn rk-trends-view-btn--active px-2.5 py-1.5 text-xs font-medium rounded-md" aria-pressed="true">Session</button>
+            <button type="button" id="trendsViewLongRangeBtn" class="rk-trends-view-btn px-2.5 py-1.5 text-xs font-medium rounded-md" aria-pressed="false">Long range</button>
+          </div>
+          <div id="trendsSessionControls" class="flex flex-wrap items-center gap-2">
+            <label class="text-xs text-gray-400 whitespace-nowrap" for="trendsWindowSelect">Window</label>
+            <select id="trendsWindowSelect" class="bg-surface-1 border border-card px-2 py-1.5 rounded-lg text-xs text-white hover:border-kaspa-primary focus:outline-none focus:border-kaspa-primary">
+              <option value="300000">Last 5 min</option>
+              <option value="900000" selected>Last 15 min</option>
+              <option value="1800000">Last 30 min</option>
+              <option value="3600000">Last 1 h</option>
+            </select>
+            <button type="button" id="trendsClearBtn" class="bg-surface-1 border border-card px-3 py-1.5 rounded-lg text-xs font-medium text-white hover:border-kaspa-primary">Clear series</button>
+          </div>
+          <button type="button" class="bg-surface-1 border border-card px-3 py-1.5 rounded-lg text-xs font-medium text-white hover:border-kaspa-primary flex items-center gap-2" data-collapsible-toggle="trendsCharts" aria-expanded="true">
+            <svg class="h-4 w-4 transition-transform" data-collapsible-icon="trendsCharts" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M5.23 7.21a.75.75 0 0 1 1.06.02L10 10.94l3.71-3.71a.75.75 0 1 1 1.06 1.06l-4.24 4.24a.75.75 0 0 1-1.06 0L5.21 8.29a.75.75 0 0 1 .02-1.08z" clip-rule="evenodd"/></svg>
+            <span data-collapsible-label="trendsCharts">Collapse</span>
+          </button>
+        </div>
+      </div>
+
+      <div class="rk-subcollapsible mb-4 sm:mb-5">
+        <div class="flex items-center justify-between gap-2 mb-2 sm:mb-3">
+          <span class="text-xs font-semibold uppercase tracking-wide text-gray-500">Bridge host</span>
+          <button type="button" class="rk-subcollapsible-toggle bg-surface-1 border border-card px-2 py-1 rounded-lg text-xs font-medium text-white hover:border-kaspa-primary flex items-center gap-1.5 shrink-0" data-collapsible-toggle="trendsHost" aria-expanded="true" title="Collapse or expand bridge host details">
+            <svg class="h-3.5 w-3.5 transition-transform" data-collapsible-icon="trendsHost" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M5.23 7.21a.75.75 0 0 1 1.06.02L10 10.94l3.71-3.71a.75.75 0 1 1 1.06 1.06l-4.24 4.24a.75.75 0 0 1-1.06 0L5.21 8.29a.75.75 0 0 1 .02-1.08z" clip-rule="evenodd"/></svg>
+            <span data-collapsible-label="trendsHost" class="hidden sm:inline">Collapse</span>
+          </button>
+        </div>
+        <div data-collapsible-body="trendsHost">
+      <div id="hostMetricsBanner" class="hidden text-xs text-gray-400 border border-card rounded-lg px-3 py-2 bg-surface-2/80 mb-4"></div>
+
+      <div id="hostSection" class="hidden rk-trends-host-header mb-0">
+        <div class="rk-trends-host-header__intro">
+          <p class="text-xs text-gray-500 max-w-3xl leading-relaxed">Machine running this <code class="text-gray-300">stratum-bridge</code> process (not the remote kaspad in external mode).</p>
+        </div>
+        <div class="rk-trends-host-header__grid">
+          <div class="rk-trends-host-header__col space-y-2 text-sm">
+            <div class="flex justify-between gap-2"><span class="text-gray-400 shrink-0">Hostname</span><span id="hostHostname" class="text-right min-w-0 break-words font-medium text-gray-100">-</span></div>
+            <div class="flex justify-between gap-2"><span class="text-gray-400 shrink-0">CPU</span><span id="hostCpu" class="text-right min-w-0 break-words text-gray-200">-</span></div>
+            <div class="flex justify-between gap-2"><span class="text-gray-400 shrink-0">Logical CPUs</span><span id="hostThreads" class="text-right tabular-nums text-gray-200">-</span></div>
+            <div class="hidden flex justify-between gap-2" id="hostOsRow"><span class="text-gray-400 shrink-0">OS</span><span id="hostOs" class="text-right min-w-0 break-words text-gray-200 text-xs">-</span></div>
+            <div class="flex justify-between gap-2"><span class="text-gray-400 shrink-0">RAM available / total</span><span id="hostRam" class="text-right tabular-nums text-gray-200">-</span></div>
+            <div class="mt-1 space-y-1">
+              <div class="flex justify-between text-[11px] text-gray-500"><span>Memory in use</span><span id="hostRamPct" class="tabular-nums">-</span></div>
+              <div class="rk-progress-track" aria-hidden="true"><div id="hostRamBar" class="rk-progress-fill" style="width:0%"></div></div>
+            </div>
+            <div class="flex justify-between gap-2"><span class="text-gray-400 shrink-0">Swap used / total</span><span id="hostSwap" class="text-right tabular-nums text-gray-200">-</span></div>
+            <div class="flex justify-between gap-2 pt-0.5"><span class="text-gray-400 shrink-0">Load / CPU</span><span id="hostLoad" class="text-right tabular-nums text-gray-200">-</span></div>
+            <div class="mt-1 space-y-1">
+              <div class="flex justify-between text-[11px] text-gray-500"><span>CPU usage</span><span id="hostCpuPct" class="tabular-nums">-</span></div>
+              <div class="rk-progress-track" aria-hidden="true"><div id="hostCpuBar" class="rk-progress-fill rk-progress-fill--cpu" style="width:0%"></div></div>
+            </div>
+            <div class="hidden pt-1 border-t border-card/30 space-y-2" id="hostNodeStorageBlock">
+              <div class="text-[11px] text-gray-500 uppercase tracking-wide">Node data &amp; volume</div>
+              <div class="hidden flex justify-between gap-2" id="hostNodeDataRow"><span class="text-gray-400 shrink-0">Data directory</span><span id="hostNodeData" class="text-right min-w-0 break-all text-xs text-gray-200 font-mono" title="">-</span></div>
+              <div class="hidden flex justify-between gap-2" id="hostVolumeRow"><span class="text-gray-400 shrink-0">Volume</span><span id="hostVolume" class="text-right min-w-0 break-words text-xs text-gray-200">-</span></div>
+              <div class="hidden mt-2 space-y-2 border border-card/50 rounded-lg px-2.5 py-2 bg-surface-2/50" id="hostVolumeSpaceBlock">
+                <div>
+                  <div class="text-[11px] text-gray-500 uppercase tracking-wide">Local disk (appdir volume)</div>
+                  <p class="text-[10px] text-gray-600 leading-snug mt-0.5">Matches your OS drive view (e.g. Windows <span class="text-gray-500">This PC → Properties</span>): total size, used, and free on the volume that contains <code class="text-gray-500 font-mono text-[10px]">appdir</code>. Linux / macOS use the same filesystem stats from the bridge host.</p>
+                </div>
+                <div class="hidden flex justify-between gap-2 text-xs" id="hostVolumeFsRow">
+                  <span class="text-gray-400 shrink-0">File system</span>
+                  <span id="hostVolumeFs" class="text-right min-w-0 break-words text-gray-200">—</span>
+                </div>
+                <div class="flex justify-between gap-2 text-xs">
+                  <span class="text-gray-400 shrink-0">Capacity</span>
+                  <span id="hostVolumeCapacity" class="text-right tabular-nums text-gray-200 min-w-0">—</span>
+                </div>
+                <div class="flex justify-between gap-2 text-xs">
+                  <span class="text-gray-400 shrink-0">Used space</span>
+                  <span id="hostVolumeUsed" class="text-right tabular-nums text-gray-200 min-w-0">—</span>
+                </div>
+                <div class="flex justify-between gap-2 text-xs">
+                  <span class="text-gray-400 shrink-0">Free space</span>
+                  <span id="hostVolumeFree" class="text-right tabular-nums text-gray-200 min-w-0">—</span>
+                </div>
+                <div id="hostVolumeSpaceTrack" class="rk-progress-track" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" aria-label="Used space on the appdir volume">
+                  <div id="hostVolumeSpaceBar" class="rk-progress-fill rk-progress-fill--volume" style="width:0%"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="rk-trends-host-header__col space-y-2 text-sm pt-2 lg:pt-0 border-t lg:border-t-0 border-card/40 lg:border-l lg:pl-6">
+            <div class="text-[11px] text-gray-500 uppercase tracking-wide">Mining-related processes</div>
+            <div id="hostProcessMetricsWrap" class="space-y-2">
+              <div id="hostBridgeProcBlock" class="space-y-2 pt-0.5">
+                <div class="flex justify-between gap-2 text-sm items-baseline">
+                  <span id="hostBridgeProcLabel" class="text-gray-400 shrink-0">Bridge</span>
+                  <span id="hostBridgeProcTag" class="text-right text-xs text-gray-500 min-w-0"></span>
+                </div>
+                <div class="flex justify-between gap-2"><span class="text-gray-400 shrink-0">PID</span><span id="hostBridgeProcPid" class="text-right tabular-nums text-gray-200">-</span></div>
+                <div class="flex justify-between gap-2"><span class="text-gray-400 shrink-0">RSS</span><span id="hostBridgeProcRss" class="text-right tabular-nums text-gray-200">-</span></div>
+                <div class="flex justify-between gap-2"><span class="text-gray-400 shrink-0">Virtual memory</span><span id="hostBridgeProcVirt" class="text-right tabular-nums text-gray-200">-</span></div>
+                <div class="mt-1 space-y-1">
+                  <div class="flex justify-between text-[11px] text-gray-500"><span>Process CPU (host share)</span><span id="hostBridgeProcCpuPct" class="tabular-nums">-</span></div>
+                  <div class="rk-progress-track" aria-hidden="true"><div id="hostBridgeProcCpuBar" class="rk-progress-fill rk-progress-fill--cpu" style="width:0%"></div></div>
+                </div>
+              </div>
+              <div id="hostKaspadProcRow" class="hidden space-y-2 pt-2 border-t border-card/30">
+                <div class="flex justify-between gap-2 text-sm items-baseline">
+                  <span class="text-gray-400 shrink-0">Kaspad</span>
+                  <span class="text-right text-xs text-gray-500 shrink-0">separate process</span>
+                </div>
+                <div class="flex justify-between gap-2"><span class="text-gray-400 shrink-0">PID</span><span id="hostKaspadProcPid" class="text-right tabular-nums text-gray-200">-</span></div>
+                <div class="flex justify-between gap-2"><span class="text-gray-400 shrink-0">RSS</span><span id="hostKaspadProcRss" class="text-right tabular-nums text-gray-200">-</span></div>
+                <div class="flex justify-between gap-2"><span class="text-gray-400 shrink-0">Virtual memory</span><span id="hostKaspadProcVirt" class="text-right tabular-nums text-gray-200">-</span></div>
+                <div class="mt-1 space-y-1">
+                  <div class="flex justify-between text-[11px] text-gray-500"><span>Process CPU (host share)</span><span id="hostKaspadProcCpuPct" class="tabular-nums">-</span></div>
+                  <div class="rk-progress-track" aria-hidden="true"><div id="hostKaspadProcCpuBar" class="rk-progress-fill rk-progress-fill--cpu" style="width:0%"></div></div>
+                </div>
+              </div>
+              <p id="hostProcessProcHint" class="text-[11px] text-gray-500 leading-snug hidden"></p>
+            </div>
+          </div>
+          <div class="rk-trends-host-header__col space-y-2 text-sm pt-2 lg:pt-0 border-t lg:border-t-0 border-card/40 lg:border-l lg:pl-6">
+            <div class="flex justify-between gap-2 hidden" id="hostLocationRow"><span class="text-gray-400 shrink-0">Location (operator)</span><span id="hostLocation" class="text-right min-w-0 break-words [text-wrap:pretty] text-gray-200">-</span></div>
+            <div class="hidden flex justify-between gap-2 rounded px-1 -mx-1 py-0.5 cursor-pointer hover:bg-white/5 transition-colors select-none border border-transparent hover:border-card/40 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#70c7ba]/50" id="hostGeoRow" role="button" tabindex="-1" title="Click to hide approximate geo (saved in this browser)"><span class="text-gray-400 shrink-0 pointer-events-none">Geo (approx.)</span><span id="hostGeo" class="text-right min-w-0 break-words [text-wrap:pretty] pointer-events-none text-gray-200">-</span></div>
+            <div class="hidden flex justify-end pt-0.5" id="hostGeoShowWrap"><button type="button" id="hostGeoShowBtn" class="text-xs font-medium kaspa-primary hover:underline" title="Show approximate geo again">Show Geo (approx.)</button></div>
+            <div class="flex justify-between gap-2 pt-1 lg:pt-0"><span class="text-gray-400 shrink-0">Host metrics</span><span id="hostPollAge" class="text-right text-xs text-gray-500">-</span></div>
+          </div>
+        </div>
+      </div>
+        </div>
+      </div>
+
+      <div data-collapsible-body="trendsCharts">
+        <div id="trendsLongRangeSub" class="rk-subcollapsible mb-4 hidden">
+          <div class="flex items-center justify-between gap-2 mb-2 sm:mb-3">
+            <span class="text-xs font-semibold uppercase tracking-wide text-gray-500">Long-range history</span>
+            <button type="button" class="rk-subcollapsible-toggle bg-surface-1 border border-card px-2 py-1 rounded-lg text-xs font-medium text-white hover:border-kaspa-primary flex items-center gap-1.5 shrink-0" data-collapsible-toggle="trendsLongRangeBody" aria-expanded="true" title="Collapse or expand long-range tools">
+              <svg class="h-3.5 w-3.5 transition-transform" data-collapsible-icon="trendsLongRangeBody" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M5.23 7.21a.75.75 0 0 1 1.06.02L10 10.94l3.71-3.71a.75.75 0 1 1 1.06 1.06l-4.24 4.24a.75.75 0 0 1-1.06 0L5.21 8.29a.75.75 0 0 1 .02-1.08z" clip-rule="evenodd"/></svg>
+              <span data-collapsible-label="trendsLongRangeBody" class="hidden sm:inline">Collapse</span>
+            </button>
+          </div>
+          <div data-collapsible-body="trendsLongRangeBody">
+        <div id="trendsLongRangePanel" class="hidden mb-0 space-y-4">
+          <div class="rounded-lg border border-card/80 bg-surface-1/40 p-4 space-y-3">
+            <div>
+              <h4 class="text-sm font-semibold text-white">Use Prometheus (easiest path)</h4>
+              <p class="text-xs text-gray-500 mt-1 max-w-3xl leading-relaxed">
+                This dashboard only keeps short-lived session charts. For days or weeks of history, run <strong class="text-gray-400 font-medium">Prometheus</strong> (and optionally <strong class="text-gray-400 font-medium">Grafana</strong>) on your network and scrape the bridge below. Then use Explore or dashboards against your Prometheus—not this tab.
+              </p>
+            </div>
+            <div class="flex flex-wrap gap-2">
+              <a id="trendsLongRangeOpenMetricsLink" href="metrics" target="_blank" rel="noopener noreferrer" class="inline-flex items-center justify-center gap-1.5 bg-kaspa-primary hover:opacity-95 px-3 py-2 rounded-lg text-xs font-medium text-white">Open /metrics</a>
+              <button type="button" id="trendsLongRangeOpenPromBtn" class="bg-surface-1 border border-card px-3 py-2 rounded-lg text-xs font-medium text-white hover:border-kaspa-primary" title="Opens http://current-host:9090 (change port in your browser if Prometheus listens elsewhere)">Open local Prometheus</button>
+              <button type="button" id="trendsLongRangeCopyScrapeBtn" class="bg-surface-1 border border-card px-3 py-2 rounded-lg text-xs font-medium text-white hover:border-kaspa-primary">Copy scrape job (YAML)</button>
+              <button type="button" id="trendsLongRangeCopyTargetBtn" class="bg-surface-1 border border-card px-3 py-2 rounded-lg text-xs font-medium text-white hover:border-kaspa-primary">Copy scrape URL</button>
+            </div>
+            <div class="space-y-1.5 text-xs">
+              <span class="text-gray-500">Prometheus <span class="text-gray-400">static_configs.targets</span> should reach this URL (same host/port you use for this UI):</span>
+              <div class="font-mono text-gray-200 break-all bg-black/30 rounded px-2 py-1.5 border border-card/50" id="trendsMetricsScrapeUrlDisplay">—</div>
+            </div>
+            <details class="rk-longrange-details rounded-lg border border-card/50 bg-black/20 group">
+              <summary class="cursor-pointer text-xs font-medium text-gray-400 hover:text-gray-200 px-3 py-2.5">Example PromQL (paste into Prometheus or Grafana Explore)</summary>
+              <pre class="mx-3 mb-3 text-[11px] text-gray-300 overflow-x-auto whitespace-pre-wrap font-mono border-t border-card/40 pt-3 leading-relaxed" id="trendsLongRangePromqlExamples"># Valid shares per second by worker
+sum by (worker) (rate(ks_valid_share_counter[5m]))
+
+# Network difficulty (instant)
+ks_network_difficulty_gauge
+
+# Estimated network hashrate
+ks_estimated_network_hashrate_gauge
+
+# Blocks mined per hour (approx., counter)
+sum(rate(ks_blocks_mined[1h])) * 3600</pre>
+            </details>
+          </div>
+
+          <details class="rk-longrange-details rounded-lg border border-dashed border-card/60 bg-surface-1/25">
+            <summary class="cursor-pointer text-xs font-medium text-gray-400 hover:text-gray-200 px-3 py-2.5">Optional: embed Grafana or Prometheus in this page</summary>
+            <div class="px-3 pb-4 pt-0 space-y-3 border-t border-card/40">
+              <p class="text-xs text-gray-500 leading-relaxed max-w-4xl pt-3">
+                Some UIs block iframes (<span class="text-gray-400">X-Frame-Options</span>). If the preview is blank, use <strong class="text-gray-400 font-medium">Open tab</strong> or the buttons above. URL is stored only in this browser.
+              </p>
+              <div class="flex flex-col sm:flex-row gap-2 sm:items-center sm:flex-wrap">
+                <input id="trendsLongRangeUrl" type="url" inputmode="url" placeholder="https://grafana.example.com/d/… or http://localhost:9090/graph?…" autocomplete="off"
+                  class="flex-1 min-w-0 min-h-[2.5rem] px-3 py-2 bg-surface-1 border border-card rounded-lg text-xs text-white placeholder-gray-500 focus:outline-none focus:border-kaspa-primary font-mono" />
+                <div class="flex flex-wrap gap-2 shrink-0">
+                  <button type="button" id="trendsLongRangeSaveBtn" class="bg-kaspa-primary hover:opacity-95 px-3 py-2 rounded-lg text-xs font-medium text-white">Save &amp; load</button>
+                  <button type="button" id="trendsLongRangeOpenBtn" class="bg-surface-1 border border-card px-3 py-2 rounded-lg text-xs font-medium text-white hover:border-kaspa-primary">Open tab</button>
+                  <button type="button" id="trendsLongRangeClearUrlBtn" class="bg-surface-1 border border-card px-3 py-2 rounded-lg text-xs font-medium text-gray-400 hover:border-kaspa-primary hover:text-white">Clear URL</button>
+                </div>
+              </div>
+              <p id="trendsLongRangeIframeHint" class="hidden text-[11px] text-amber-400/90">If the frame stays blank, the site may send X-Frame-Options; use <strong class="font-medium">Open tab</strong> instead.</p>
+              <div class="rk-trends-embed-frame-wrap rounded-lg border border-card overflow-hidden bg-black/40">
+                <iframe id="trendsLongRangeIframe" class="rk-trends-embed-frame w-full border-0" title="Long-range metrics dashboard" sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-popups-to-escape-sandbox"></iframe>
+              </div>
+            </div>
+          </details>
+        </div>
+          </div>
+        </div>
+        <div id="trendsSessionChartsSub" class="rk-subcollapsible">
+          <div class="flex items-center justify-between gap-2 mb-2 sm:mb-3">
+            <span class="text-xs font-semibold uppercase tracking-wide text-gray-500">Session charts</span>
+            <button type="button" class="rk-subcollapsible-toggle bg-surface-1 border border-card px-2 py-1 rounded-lg text-xs font-medium text-white hover:border-kaspa-primary flex items-center gap-1.5 shrink-0" data-collapsible-toggle="trendsSessionChartsBody" aria-expanded="true" title="Collapse or expand live session charts">
+              <svg class="h-3.5 w-3.5 transition-transform" data-collapsible-icon="trendsSessionChartsBody" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M5.23 7.21a.75.75 0 0 1 1.06.02L10 10.94l3.71-3.71a.75.75 0 1 1 1.06 1.06l-4.24 4.24a.75.75 0 0 1-1.06 0L5.21 8.29a.75.75 0 0 1 .02-1.08z" clip-rule="evenodd"/></svg>
+              <span data-collapsible-label="trendsSessionChartsBody" class="hidden sm:inline">Collapse</span>
+            </button>
+          </div>
+          <div data-collapsible-body="trendsSessionChartsBody">
+        <div id="trendsSessionChartsWrap">
+        <div id="trendsChartsEmpty" class="hidden text-sm text-gray-500 border border-dashed border-card rounded-lg px-4 py-8 text-center">
+          No trend samples yet. Wait for host metrics from the bridge, or enable <code class="text-gray-300">rkstratum_host_metrics</code>.
+        </div>
+        <div id="trendsChartsGrid" class="grid grid-cols-1 lg:grid-cols-2 gap-4 lg:gap-5">
+          <div class="rk-trends-chart-card">
+            <div class="rk-trends-chart-head"><span class="rk-trends-chart-title">CPU (Bridge host)</span><span class="rk-trends-chart-stats" id="trendsStatsCpu"></span></div>
+            <div class="rk-trends-canvas-wrap"><canvas id="trendChartCpu" aria-label="CPU trend"></canvas></div>
+          </div>
+          <div class="rk-trends-chart-card">
+            <div class="rk-trends-chart-head"><span class="rk-trends-chart-title">Memory (host &amp; RSS)</span><span class="rk-trends-chart-stats" id="trendsStatsMem"></span></div>
+            <div class="rk-trends-canvas-wrap"><canvas id="trendChartMem" aria-label="Memory trend"></canvas></div>
+          </div>
+          <div class="rk-trends-chart-card">
+            <div class="rk-trends-chart-head"><span class="rk-trends-chart-title">Network (all interfaces)</span><span class="rk-trends-chart-stats" id="trendsStatsNet"></span></div>
+            <div class="rk-trends-canvas-wrap"><canvas id="trendChartNet" aria-label="Network trend"></canvas></div>
+          </div>
+          <div class="rk-trends-chart-card">
+            <div class="rk-trends-chart-head"><span class="rk-trends-chart-title">Bridge process disk I/O</span><span class="rk-trends-chart-stats" id="trendsStatsDisk"></span></div>
+            <div class="rk-trends-canvas-wrap"><canvas id="trendChartDisk" aria-label="Disk trend"></canvas></div>
+          </div>
+          <div class="rk-trends-chart-card">
+            <div class="rk-trends-chart-head"><span class="rk-trends-chart-title">Node: peers &amp; mempool</span><span class="rk-trends-chart-stats" id="trendsStatsRpc"></span></div>
+            <div class="rk-trends-canvas-wrap"><canvas id="trendChartRpc" aria-label="Peers and mempool trend"></canvas></div>
+          </div>
+          <div class="rk-trends-chart-card">
+            <div class="rk-trends-chart-head"><span class="rk-trends-chart-title">Sync &amp; data volume</span><span class="rk-trends-chart-stats" id="trendsStatsSync"></span></div>
+            <div class="rk-trends-canvas-wrap"><canvas id="trendChartSync" aria-label="Sync and volume trend"></canvas></div>
+          </div>
+        </div>
+        </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="rk-recent-blocks-panel rk-panel-chart bg-surface-2 rounded-xl p-4 sm:p-6 border border-card mb-8 xl:col-span-12">
         <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4 mb-4">
-          <h3 class="text-lg font-semibold kaspa-primary">Recent Blocks</h3>
+          <div class="min-w-0">
+            <h3 class="text-lg font-semibold kaspa-primary rk-panel-title">Recent blocks</h3>
+            <p class="text-xs text-gray-500 mt-1 max-w-2xl">Same data as the table below — blocks over time and by worker for the current filters.</p>
+          </div>
           <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-3">
             <div class="flex items-center gap-2">
               <label for="blocksDayFilter" class="text-xs text-gray-400 whitespace-nowrap">Filter by days:</label>
@@ -188,15 +505,68 @@
           </div>
         </div>
         <div data-collapsible-body="recentBlocks">
+          <div class="rk-subcollapsible mb-4 sm:mb-5">
+            <div class="flex items-center justify-between gap-2 mb-2 sm:mb-3">
+              <span class="text-xs font-semibold uppercase tracking-wide text-gray-500">Charts &amp; summary</span>
+              <button type="button" class="rk-subcollapsible-toggle bg-surface-1 border border-card px-2 py-1 rounded-lg text-xs font-medium text-white hover:border-kaspa-primary flex items-center gap-1.5 shrink-0" data-collapsible-toggle="recentBlocksViz" aria-expanded="true" title="Collapse or expand charts and summary">
+                <svg class="h-3.5 w-3.5 transition-transform" data-collapsible-icon="recentBlocksViz" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M5.23 7.21a.75.75 0 0 1 1.06.02L10 10.94l3.71-3.71a.75.75 0 1 1 1.06 1.06l-4.24 4.24a.75.75 0 0 1-1.06 0L5.21 8.29a.75.75 0 0 1 .02-1.08z" clip-rule="evenodd"/></svg>
+                <span data-collapsible-label="recentBlocksViz" class="hidden sm:inline">Collapse</span>
+              </button>
+            </div>
+            <div data-collapsible-body="recentBlocksViz">
+          <div id="recentBlocksVizWrap" class="mb-0 space-y-3">
+            <div class="rk-recent-blocks-stats grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-3">
+              <div class="rk-recent-blocks-stat rounded-lg border border-card/80 bg-surface-1/40 px-3 py-2">
+                <div class="text-[0.65rem] uppercase tracking-wide text-gray-500">In view</div>
+                <div id="recentBlocksStatCount" class="text-lg font-semibold text-white tabular-nums">—</div>
+              </div>
+              <div class="rk-recent-blocks-stat rounded-lg border border-card/80 bg-surface-1/40 px-3 py-2">
+                <div class="text-[0.65rem] uppercase tracking-wide text-gray-500">Workers</div>
+                <div id="recentBlocksStatWorkers" class="text-lg font-semibold text-white tabular-nums">—</div>
+              </div>
+              <div class="rk-recent-blocks-stat rounded-lg border border-card/80 bg-surface-1/40 px-3 py-2 col-span-2 lg:col-span-2">
+                <div class="text-[0.65rem] uppercase tracking-wide text-gray-500">Time span (oldest → newest)</div>
+                <div id="recentBlocksStatSpan" class="text-sm font-medium text-gray-200 truncate" title="">—</div>
+              </div>
+            </div>
+            <div id="recentBlocksVizCharts" class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+              <div class="rk-trends-chart-card">
+                <div class="rk-trends-chart-head">
+                  <span class="rk-trends-chart-title">Blocks over time</span>
+                  <span class="rk-trends-chart-stats" id="recentBlocksTimelineStats"></span>
+                </div>
+                <div class="rk-trends-canvas-wrap"><canvas id="recentBlocksTimelineChart" aria-label="Blocks over time"></canvas></div>
+              </div>
+              <div class="rk-trends-chart-card">
+                <div class="rk-trends-chart-head">
+                  <span class="rk-trends-chart-title">By instance / worker</span>
+                  <span class="rk-trends-chart-stats" id="recentBlocksWorkerStats"></span>
+                </div>
+                <div class="rk-trends-canvas-wrap"><canvas id="recentBlocksWorkerChart" aria-label="Blocks by instance and worker"></canvas></div>
+              </div>
+            </div>
+            <p id="recentBlocksVizEmpty" class="hidden text-sm text-gray-500 text-center py-8 border border-dashed border-card rounded-lg bg-surface-1/30">No blocks in the current view. Try another day range or clear the wallet filter.</p>
+          </div>
+            </div>
+          </div>
+          <div class="rk-subcollapsible">
+            <div class="flex items-center justify-between gap-2 mb-2 sm:mb-3">
+              <span class="text-xs font-semibold uppercase tracking-wide text-gray-500">Block table</span>
+              <button type="button" class="rk-subcollapsible-toggle bg-surface-1 border border-card px-2 py-1 rounded-lg text-xs font-medium text-white hover:border-kaspa-primary flex items-center gap-1.5 shrink-0" data-collapsible-toggle="recentBlocksTable" aria-expanded="true" title="Collapse or expand block table">
+                <svg class="h-3.5 w-3.5 transition-transform" data-collapsible-icon="recentBlocksTable" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M5.23 7.21a.75.75 0 0 1 1.06.02L10 10.94l3.71-3.71a.75.75 0 1 1 1.06 1.06l-4.24 4.24a.75.75 0 0 1-1.06 0L5.21 8.29a.75.75 0 0 1 .02-1.08z" clip-rule="evenodd"/></svg>
+                <span data-collapsible-label="recentBlocksTable" class="hidden sm:inline">Collapse</span>
+              </button>
+            </div>
+            <div data-collapsible-body="recentBlocksTable">
           <div class="sm:hidden text-xs text-gray-400 mb-2">Tip: swipe sideways to see all columns, or tap a row to view full details.</div>
-          <div class="table-wrap">
-            <table class="min-w-[980px] w-max text-sm">
+          <div class="table-wrap rk-recent-blocks-table-wrap">
+            <table class="rk-recent-blocks-table min-w-[980px] w-max text-sm">
               <colgroup>
                 <col style="width: 12rem;" />
                 <col style="width: 6.5rem;" />
                 <col style="width: 7.5rem;" />
                 <col style="width: 7rem;" />
-                <col />
+                <col style="width: 13rem;" />
                 <col style="width: 11rem;" />
                 <col style="width: 12rem;" />
               </colgroup>
@@ -214,13 +584,18 @@
               <tbody id="blocksBody" class="text-gray-200"></tbody>
             </table>
           </div>
+            </div>
+          </div>
         </div>
       </div>
 
-    <div class="bg-surface-2 rounded-lg p-6 border border-card mb-8 xl:col-span-12">
-        <div class="flex items-center justify-between gap-4 mb-4">
-          <h3 class="text-lg font-semibold kaspa-primary">Workers</h3>
-          <div class="flex items-center gap-3">
+    <div class="rk-workers-panel rk-panel-chart bg-surface-2 rounded-xl p-5 sm:p-6 border border-card mb-8 xl:col-span-12">
+        <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 mb-4">
+          <div class="min-w-0">
+            <h3 class="text-lg font-semibold kaspa-primary rk-panel-title">Workers</h3>
+            <p class="text-xs text-gray-500 mt-1 max-w-2xl">Per-worker comparison (hashrate, difficulty, shares, rejects, blocks, uptime) — same filter as the table below.</p>
+          </div>
+          <div class="flex items-center gap-3 shrink-0">
             <button type="button" class="bg-surface-1 border border-card px-3 py-1.5 rounded-lg text-xs font-medium text-white hover:border-kaspa-primary flex items-center gap-2" data-collapsible-toggle="workers" aria-expanded="true">
               <svg class="h-4 w-4 transition-transform" data-collapsible-icon="workers" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M5.23 7.21a.75.75 0 0 1 1.06.02L10 10.94l3.71-3.71a.75.75 0 1 1 1.06 1.06l-4.24 4.24a.75.75 0 0 1-1.06 0L5.21 8.29a.75.75 0 0 1 .02-1.08z" clip-rule="evenodd"/></svg>
               <span data-collapsible-label="workers">Collapse</span>
@@ -229,41 +604,130 @@
           </div>
         </div>
         <div data-collapsible-body="workers">
-          <div class="sm:hidden text-xs text-gray-400 mb-2">Tip: swipe sideways to see all columns, or tap a row to view full details.</div>
-          <div class="table-wrap" data-workers-table>
-            <table class="min-w-[1400px] w-max text-sm">
+          <div class="rk-subcollapsible mb-4 sm:mb-5">
+            <div class="flex items-center justify-between gap-2 mb-2 sm:mb-3">
+              <span class="text-xs font-semibold uppercase tracking-wide text-gray-500">Charts &amp; summary</span>
+              <button type="button" class="rk-subcollapsible-toggle bg-surface-1 border border-card px-2 py-1 rounded-lg text-xs font-medium text-white hover:border-kaspa-primary flex items-center gap-1.5 shrink-0" data-collapsible-toggle="workersViz" aria-expanded="true" title="Collapse or expand charts and summary">
+                <svg class="h-3.5 w-3.5 transition-transform" data-collapsible-icon="workersViz" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M5.23 7.21a.75.75 0 0 1 1.06.02L10 10.94l3.71-3.71a.75.75 0 1 1 1.06 1.06l-4.24 4.24a.75.75 0 0 1-1.06 0L5.21 8.29a.75.75 0 0 1 .02-1.08z" clip-rule="evenodd"/></svg>
+                <span data-collapsible-label="workersViz" class="hidden sm:inline">Collapse</span>
+              </button>
+            </div>
+            <div data-collapsible-body="workersViz">
+          <div id="workersVizWrap" class="rk-workers-viz mb-0 space-y-3">
+            <div class="rk-workers-stats grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-3">
+              <div class="rk-recent-blocks-stat rounded-lg border border-card/80 bg-surface-1/40 px-3 py-2">
+                <div class="text-[0.65rem] uppercase tracking-wide text-gray-500">Rows in view</div>
+                <div id="workersStatCount" class="text-lg font-semibold text-white tabular-nums">—</div>
+              </div>
+              <div class="rk-recent-blocks-stat rounded-lg border border-card/80 bg-surface-1/40 px-3 py-2">
+                <div class="text-[0.65rem] uppercase tracking-wide text-gray-500">Σ Hashrate</div>
+                <div id="workersStatHashrateSum" class="text-lg font-semibold text-white tabular-nums">—</div>
+              </div>
+              <div class="rk-recent-blocks-stat rounded-lg border border-card/80 bg-surface-1/40 px-3 py-2">
+                <div class="text-[0.65rem] uppercase tracking-wide text-gray-500">Σ Shares</div>
+                <div id="workersStatSharesSum" class="text-lg font-semibold text-white tabular-nums">—</div>
+              </div>
+              <div class="rk-recent-blocks-stat rounded-lg border border-card/80 bg-surface-1/40 px-3 py-2">
+                <div class="text-[0.65rem] uppercase tracking-wide text-gray-500">Σ Blocks</div>
+                <div id="workersStatBlocksSum" class="text-lg font-semibold text-white tabular-nums">—</div>
+              </div>
+            </div>
+            <div id="workersVizCharts" class="grid grid-cols-1 xl:grid-cols-2 gap-4">
+              <div class="rk-trends-chart-card">
+                <div class="rk-trends-chart-head">
+                  <span class="rk-trends-chart-title">Hashrate</span>
+                  <span class="rk-trends-chart-stats" id="workersChartHashrateStats"></span>
+                </div>
+                <div class="rk-trends-canvas-wrap rk-workers-chart-canvas-wrap"><canvas id="workerChartHashrate" aria-label="Worker hashrate"></canvas></div>
+              </div>
+              <div id="workersCardDifficulty" class="rk-trends-chart-card">
+                <div class="rk-trends-chart-head">
+                  <span class="rk-trends-chart-title">Diff</span>
+                  <span class="rk-trends-chart-stats" id="workersChartDifficultyStats"></span>
+                </div>
+                <div class="rk-trends-canvas-wrap rk-workers-chart-canvas-wrap"><canvas id="workerChartDifficulty" aria-label="Worker difficulty"></canvas></div>
+              </div>
+              <div class="rk-trends-chart-card xl:col-span-2">
+                <div class="rk-trends-chart-head">
+                  <span class="rk-trends-chart-title">Shares · rejects · blocks · node</span>
+                  <span class="rk-trends-chart-stats" id="workersChartSubmissionStats"></span>
+                </div>
+                <div class="rk-trends-canvas-wrap rk-workers-chart-canvas-wrap rk-workers-chart-canvas-wrap--wide"><canvas id="workerChartSubmission" aria-label="Worker shares and blocks"></canvas></div>
+              </div>
+              <div id="workersCardSession" class="rk-trends-chart-card xl:col-span-2">
+                <div class="rk-trends-chart-head">
+                  <span class="rk-trends-chart-title">Session uptime</span>
+                  <span class="rk-trends-chart-stats" id="workersChartSessionStats"></span>
+                </div>
+                <div class="rk-trends-canvas-wrap rk-workers-chart-canvas-wrap"><canvas id="workerChartSession" aria-label="Worker session uptime"></canvas></div>
+              </div>
+            </div>
+            <p id="workersVizEmpty" class="hidden text-sm text-gray-500 text-center py-8 border border-dashed border-card rounded-lg bg-surface-1/30">No workers in the current view. Clear the wallet filter or wait for workers to connect.</p>
+          </div>
+            </div>
+          </div>
+          <div class="rk-subcollapsible">
+            <div class="flex items-center justify-between gap-2 mb-2 sm:mb-3">
+              <span class="text-xs font-semibold uppercase tracking-wide text-gray-500">Worker table</span>
+              <button type="button" class="rk-subcollapsible-toggle bg-surface-1 border border-card px-2 py-1 rounded-lg text-xs font-medium text-white hover:border-kaspa-primary flex items-center gap-1.5 shrink-0" data-collapsible-toggle="workersTable" aria-expanded="true" title="Collapse or expand worker table">
+                <svg class="h-3.5 w-3.5 transition-transform" data-collapsible-icon="workersTable" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M5.23 7.21a.75.75 0 0 1 1.06.02L10 10.94l3.71-3.71a.75.75 0 1 1 1.06 1.06l-4.24 4.24a.75.75 0 0 1-1.06 0L5.21 8.29a.75.75 0 0 1 .02-1.08z" clip-rule="evenodd"/></svg>
+                <span data-collapsible-label="workersTable" class="hidden sm:inline">Collapse</span>
+              </button>
+            </div>
+            <div data-collapsible-body="workersTable">
+          <div class="text-xs text-gray-400 mb-2 max-w-prose"><span class="hidden sm:inline">The table fits the panel width; under 1280px some diagnostic columns hide—tap a row for full fields.</span><span class="sm:hidden">Swipe sideways for all columns. Tap a row for full details (jobs, balance, last seen, session, etc.).</span></div>
+          <div class="table-wrap rk-workers-table-wrap" data-workers-table>
+            <table class="rk-workers-table w-full min-w-0 text-xs sm:text-sm">
               <colgroup>
-                <col style="width: 6.5rem;" />
-                <col style="width: 9rem;" />
-                <col />
-                <col style="width: 9rem;" />
-                <col style="width: 7rem;" />
-                <col style="width: 4.5rem;" />
-                <col style="width: 4.5rem;" />
-                <col style="width: 4.5rem;" />
-                <col style="width: 4.5rem;" />
-                <col style="width: 5rem;" />
-                <col style="width: 8rem;" />
-                <col style="width: 8rem;" />
+                <col style="width: 7%;" />
+                <col style="width: 8%;" />
+                <col style="width: 10%;" />
+                <col style="width: 9%;" />
+                <col style="width: 6%;" />
+                <col style="width: 5%;" />
+                <col style="width: 3%;" />
+                <col style="width: 3%;" />
+                <col style="width: 2.5%;" />
+                <col style="width: 2.5%;" />
+                <col style="width: 4%;" />
+                <col style="width: 3%;" />
+                <col style="width: 3%;" />
+                <col style="width: 2.5%;" />
+                <col style="width: 4%;" />
+                <col style="width: 5%;" />
+                <col style="width: 2.5%;" />
+                <col style="width: 6%;" />
+                <col style="width: 7%;" />
+                <col style="width: 8.5%;" />
               </colgroup>
               <thead class="text-gray-400">
                 <tr class="border-b border-card">
-                  <th class="text-left py-2 pr-3">Instance</th>
-                  <th class="text-left py-2 pr-3">Worker</th>
-                  <th class="text-left py-2 pr-3">Wallet</th>
-                  <th class="text-left py-2 pr-3">Hashrate (GH/s)</th>
-                  <th class="text-left py-2 pr-3">Difficulty</th>
-                  <th class="text-left py-2 pr-3">Shares</th>
-                  <th class="text-left py-2 pr-3">Stale</th>
-                  <th class="text-left py-2 pr-3">Invalid</th>
-                  <th class="text-left py-2 pr-3">Blocks</th>
-                  <th class="text-left py-2 pr-3">Status</th>
-                  <th class="text-left py-2 pr-3">Last Seen</th>
-                  <th class="text-left py-2 pr-3">Session Uptime</th>
+                  <th class="text-left py-2">Instance</th>
+                  <th class="text-left py-2">Worker</th>
+                  <th class="text-left py-2">Wallet</th>
+                  <th class="text-left py-2">Hashrate</th>
+                  <th class="text-left py-2">Diff</th>
+                  <th class="text-left py-2">Shares</th>
+                  <th class="text-left py-2 rk-wt-aux" title="Hidden on smaller screens; open row for details">Stale</th>
+                  <th class="text-left py-2 rk-wt-aux" title="Hidden on smaller screens; open row for details">Invalid</th>
+                  <th class="text-left py-2 rk-wt-aux" title="Duplicate shares">Dup</th>
+                  <th class="text-left py-2 rk-wt-aux" title="Weak shares">Weak</th>
+                  <th class="text-left py-2">Blocks</th>
+                  <th class="text-left py-2 rk-wt-aux" title="Blocks accepted by node">Acc Δ</th>
+                  <th class="text-left py-2 rk-wt-aux" title="Blocks not confirmed blue">N-blue</th>
+                  <th class="text-left py-2 rk-wt-aux" title="Disconnects">DC</th>
+                  <th class="text-left py-2 rk-wt-phone-hide" title="Jobs sent; hidden on small phones—see row details">Jobs</th>
+                  <th class="text-left py-2 rk-wt-phone-hide" title="Balance; hidden on small phones—see row details">Bal</th>
+                  <th class="text-left py-2 rk-wt-aux" title="Errors (all types)">Err</th>
+                  <th class="text-left py-2">Status</th>
+                  <th class="text-left py-2 rk-wt-phone-hide" title="Hidden on small phones—see row details">Last Seen</th>
+                  <th class="text-left py-2 rk-wt-phone-hide" title="Hidden on small phones—see row details">Session</th>
                 </tr>
               </thead>
               <tbody id="workersBody" class="text-gray-200"></tbody>
             </table>
+          </div>
+            </div>
           </div>
         </div>
       </div>
@@ -286,6 +750,7 @@
     </div>
   </div>
 
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js" crossorigin="anonymous"></script>
   <script src="static/js/dashboard.js"></script>
 
   <div id="toast" class="hidden fixed right-4 top-4 z-50 bg-surface-1 border border-card px-4 py-2 rounded-lg text-sm text-white"></div>

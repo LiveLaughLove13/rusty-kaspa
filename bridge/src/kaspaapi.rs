@@ -8,14 +8,16 @@ use kaspa_notify::{listener::ListenerId, scope::NewBlockTemplateScope};
 use kaspa_rpc_core::notify::mode::NotificationMode;
 use kaspa_rpc_core::{
     GetBlockDagInfoRequest, GetBlockTemplateRequest, GetConnectedPeerInfoRequest, GetCurrentBlockColorRequest, GetInfoRequest,
-    GetServerInfoRequest, Notification, RpcHash, RpcRawBlock, SubmitBlockRequest, SubmitBlockResponse, api::rpc::RpcApi,
+    GetServerInfoRequest, GetSinkBlueScoreRequest, Notification, RpcHash, RpcRawBlock, SubmitBlockRequest, SubmitBlockResponse,
+    api::rpc::RpcApi,
 };
 use once_cell::sync::Lazy;
 use parking_lot::Mutex;
+use serde::Serialize;
 use std::collections::{HashMap, VecDeque};
 use std::str::FromStr;
 use std::sync::Arc;
-use std::time::{Duration, Instant};
+use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 use tokio::sync::mpsc;
 use tokio::sync::watch;
 use tokio::time::sleep;
@@ -113,11 +115,14 @@ static BLOCK_SUBMIT_GUARD: Lazy<Mutex<BlockSubmitGuard>> =
 #[derive(Clone, Debug, Default)]
 pub struct NodeStatusSnapshot {
     pub last_updated: Option<std::time::Instant>,
+    /// Wall clock ms since UNIX epoch when the snapshot was last refreshed (for dashboards).
+    pub last_updated_unix_ms: Option<u64>,
     pub is_connected: bool,
     pub is_synced: Option<bool>,
     pub network_id: Option<String>,
     pub server_version: Option<String>,
     pub virtual_daa_score: Option<u64>,
+    pub sink_blue_score: Option<u64>,
     pub block_count: Option<u64>,
     pub header_count: Option<u64>,
     pub difficulty: Option<f64>,
@@ -127,6 +132,75 @@ pub struct NodeStatusSnapshot {
 }
 
 pub static NODE_STATUS: Lazy<Mutex<NodeStatusSnapshot>> = Lazy::new(|| Mutex::new(NodeStatusSnapshot::default()));
+
+/// JSON-friendly node snapshot for `/api/status` (camelCase matches prior dashboard conventions for nested objects).
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct NodeStatusApi {
+    pub is_connected: bool,
+    pub is_synced: Option<bool>,
+    pub network_id: Option<String>,
+    pub network_display: Option<String>,
+    pub server_version: Option<String>,
+    pub virtual_daa_score: Option<u64>,
+    pub sink_blue_score: Option<u64>,
+    pub block_count: Option<u64>,
+    pub header_count: Option<u64>,
+    /// DAG difficulty from the node (RPC); distinct from Prometheus-estimated network difficulty on the dashboard.
+    pub difficulty: Option<f64>,
+    pub tip_hash: Option<String>,
+    pub peers: Option<usize>,
+    pub mempool_size: Option<u64>,
+    pub last_updated_unix_ms: Option<u64>,
+}
+
+/// Short network label for UI (same parsing idea as the `[NODE]` log line).
+pub fn network_display_from_id(network_id: Option<&str>) -> Option<String> {
+    let net = network_id?.trim();
+    if net.is_empty() || net == "-" {
+        return None;
+    }
+    let mut network_type = None;
+    let mut suffix = None;
+    if let Some(pos) = net.find("network_type:") {
+        let s = &net[pos + "network_type:".len()..];
+        let s = s.trim_start();
+        network_type = s.split(&[',', '}'][..]).next().map(|v| v.trim());
+    }
+    if let Some(pos) = net.find("suffix:") {
+        let s = &net[pos + "suffix:".len()..];
+        let s = s.trim_start();
+        let raw = s.split(&[',', '}'][..]).next().map(|v| v.trim());
+        if raw != Some("None") {
+            suffix = raw;
+        }
+    }
+    Some(match (network_type, suffix) {
+        (Some(nt), Some(suf)) => format!("{}-{}", nt, suf),
+        (Some(nt), None) => nt.to_string(),
+        _ => net.to_string(),
+    })
+}
+
+pub fn node_status_for_api() -> NodeStatusApi {
+    let s = NODE_STATUS.lock();
+    NodeStatusApi {
+        is_connected: s.is_connected,
+        is_synced: s.is_synced,
+        network_id: s.network_id.clone(),
+        network_display: network_display_from_id(s.network_id.as_deref()),
+        server_version: s.server_version.clone(),
+        virtual_daa_score: s.virtual_daa_score,
+        sink_blue_score: s.sink_blue_score,
+        block_count: s.block_count,
+        header_count: s.header_count,
+        difficulty: s.difficulty,
+        tip_hash: s.tip_hash.clone(),
+        peers: s.peers,
+        mempool_size: s.mempool_size,
+        last_updated_unix_ms: s.last_updated_unix_ms,
+    }
+}
 
 /// Kaspa API client wrapper using RPC client
 /// Both use gRPC under the hood, but through an RPC client wrapper abstraction
@@ -342,11 +416,14 @@ impl KaspaApi {
             let dag_info_fut = self.client.get_block_dag_info_call(None, GetBlockDagInfoRequest {});
             let peers_fut = self.client.get_connected_peer_info_call(None, GetConnectedPeerInfoRequest {});
             let info_fut = self.client.get_info_call(None, GetInfoRequest {});
+            let sink_bs_fut = self.client.get_sink_blue_score_call(None, GetSinkBlueScoreRequest {});
 
-            let (server_info, dag_info, peers_info, info_resp) = tokio::join!(server_info_fut, dag_info_fut, peers_fut, info_fut);
+            let (server_info, dag_info, peers_info, info_resp, sink_bs_resp) =
+                tokio::join!(server_info_fut, dag_info_fut, peers_fut, info_fut, sink_bs_fut);
 
             let mut snapshot = NODE_STATUS.lock();
-            snapshot.last_updated = Some(std::time::Instant::now());
+            snapshot.last_updated = Some(Instant::now());
+            snapshot.last_updated_unix_ms = SystemTime::now().duration_since(UNIX_EPOCH).ok().map(|d| d.as_millis() as u64);
             snapshot.is_connected = connected;
 
             if let Ok(server_info) = server_info {
@@ -379,6 +456,8 @@ impl KaspaApi {
                     snapshot.server_version = Some(info.server_version);
                 }
             }
+
+            snapshot.sink_blue_score = sink_bs_resp.ok().map(|r| r.blue_score);
         }
     }
 
