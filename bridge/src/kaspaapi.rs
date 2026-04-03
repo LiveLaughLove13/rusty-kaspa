@@ -730,10 +730,10 @@ impl KaspaApi {
         let mut last_slow_warn = Instant::now() - Duration::from_secs(30);
 
         loop {
-            if let Some(rx) = shutdown_rx.as_mut() {
-                if *rx.borrow() {
-                    return false;
-                }
+            if let Some(rx) = shutdown_rx.as_mut()
+                && *rx.borrow()
+            {
+                return false;
             }
 
             let ready_fut = self.is_node_synced_for_mining();
