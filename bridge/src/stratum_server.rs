@@ -270,7 +270,7 @@ async fn listen_and_serve_impl<T: KaspaApiTrait + Send + Sync + 'static>(
                             if !kaspa_api_poll.is_node_synced_for_mining().await {
                                 if was_synced {
                                     warn!(
-                                        "Kaspa is not synced — pausing block template polling until sync completes (same rules as getSyncStatus)"
+                                        "Kaspa is not mining-ready — pausing template polling until sync, P2P IBD, and block/header parity match"
                                     );
                                     was_synced = false;
                                 }
@@ -285,7 +285,7 @@ async fn listen_and_serve_impl<T: KaspaApiTrait + Send + Sync + 'static>(
                     if !kaspa_api_poll.is_node_synced_for_mining().await {
                         if was_synced {
                             warn!(
-                                "Kaspa is not synced — pausing block template polling until sync completes (same rules as getSyncStatus)"
+                                "Kaspa is not mining-ready — pausing template polling until sync, P2P IBD, and block/header parity match"
                             );
                             was_synced = false;
                         }
