@@ -939,12 +939,35 @@ impl KaspaApi {
         Ok(resp.blue)
     }
 
-    /// Block until synced or shutdown requested (`shutdown` watch is `true`). Returns `false` if shutting down.
+    /// Block until mining-ready or shutdown. No extra stability window here: [`wait_for_sync_with_shutdown`]
+    /// in `main` already enforces [`MIN_MINING_READY_STABLE`]; repeating it would delay template jobs ~2s after
+    /// TCP accepts miners on each outer-loop re-entry.
     async fn block_until_synced_or_shutdown(api: Arc<Self>, shutdown_rx: &mut watch::Receiver<bool>) -> bool {
-        if *shutdown_rx.borrow() {
-            return false;
+        loop {
+            if *shutdown_rx.borrow() {
+                return false;
+            }
+
+            let ready_fut = api.is_node_synced_for_mining();
+            let ready = tokio::select! {
+                _ = shutdown_rx.wait_for(|v| *v) => {
+                    return false;
+                }
+                r = ready_fut => r,
+            };
+
+            if ready {
+                return true;
+            }
+            warn!("Kaspa is not synced (or P2P IBD still active), waiting for sync before starting bridge");
+
+            tokio::select! {
+                _ = shutdown_rx.wait_for(|v| *v) => {
+                    return false;
+                }
+                _ = sleep(Duration::from_secs(10)) => {}
+            }
         }
-        api.wait_until_mining_ready_stable(Some(shutdown_rx)).await
     }
 
     /// Start listening for block template notifications
