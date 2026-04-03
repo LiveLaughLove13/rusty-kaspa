@@ -478,7 +478,9 @@ impl KaspaApi {
     /// Submit a block
     pub async fn submit_block(&self, block: Block) -> Result<SubmitBlockResponse> {
         if !self.is_node_synced_for_mining().await {
-            return Err(anyhow::anyhow!("refusing block submit: Kaspa node is not fully synced (IBD/catch-up in progress)"));
+            return Err(anyhow::anyhow!(
+                "refusing block submit: node not mining-ready (sync / transitional IBD / P2P IBD in progress)"
+            ));
         }
 
         // Use kaspa_consensus_core::hashing::header::hash() for block hash calculation
@@ -743,7 +745,9 @@ impl KaspaApi {
     /// Get block template for a client
     pub async fn get_block_template(&self, wallet_addr: &str, _remote_app: &str, _canxium_addr: &str) -> Result<Block> {
         if !self.is_node_synced_for_mining().await {
-            return Err(anyhow::anyhow!("refusing block template: Kaspa node is not fully synced (IBD/catch-up in progress)"));
+            return Err(anyhow::anyhow!(
+                "refusing block template: node not mining-ready (sync / transitional IBD / P2P IBD in progress)"
+            ));
         }
 
         // Retry up to 3 times if we get "Odd number of digits" error
