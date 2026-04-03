@@ -26,6 +26,11 @@ use tracing::{debug, error, info, warn};
 const STRATUM_COINBASE_TAG_BYTES: &[u8] = b"RK-Stratum";
 const MAX_COINBASE_TAG_SUFFIX_LEN: usize = 64;
 
+/// Mining-ready must hold continuously at least this long before binding stratum. From disk the node
+/// can report parity + no IBD peer for a short window before P2P schedules IBD (race on cold/extra connect).
+const MIN_MINING_READY_STABLE: Duration = Duration::from_secs(2);
+const MINING_READY_STABLE_POLL: Duration = Duration::from_millis(400);
+
 fn sanitize_coinbase_tag_suffix(suffix: &str) -> Option<String> {
     let suffix = suffix.trim().trim_start_matches('/');
     if suffix.is_empty() {
@@ -717,46 +722,78 @@ impl KaspaApi {
         }
     }
 
+    /// Wait until [`is_node_synced_for_mining`] stays true for [`MIN_MINING_READY_STABLE`]. If
+    /// `shutdown_rx` is set, returns `false` when shutdown is requested; otherwise only returns `true`.
+    async fn wait_until_mining_ready_stable(&self, mut shutdown_rx: Option<&mut watch::Receiver<bool>>) -> bool {
+        let mut stable_since: Option<Instant> = None;
+        // So the first "not synced" path can warn without waiting 10s from process start.
+        let mut last_slow_warn = Instant::now().saturating_sub(Duration::from_secs(30));
+
+        loop {
+            if let Some(rx) = shutdown_rx.as_mut() {
+                if *rx.borrow() {
+                    return false;
+                }
+            }
+
+            let ready_fut = self.is_node_synced_for_mining();
+            let ready = match shutdown_rx.as_mut() {
+                Some(rx) => {
+                    tokio::select! {
+                        _ = rx.wait_for(|v| *v) => return false,
+                        r = ready_fut => r,
+                    }
+                }
+                None => ready_fut.await,
+            };
+
+            let now = Instant::now();
+            if ready {
+                match stable_since {
+                    None => stable_since = Some(now),
+                    Some(t0) if now.duration_since(t0) >= MIN_MINING_READY_STABLE => return true,
+                    Some(_) => {}
+                }
+            } else {
+                if stable_since.take().is_some() {
+                    warn!(
+                        "{} {}",
+                        LogColors::api("[API]"),
+                        LogColors::label(
+                            "Mining-ready dropped before stability window elapsed; continuing to wait (avoids opening stratum right before P2P IBD)"
+                        )
+                    );
+                }
+                if now.duration_since(last_slow_warn) >= Duration::from_secs(10) {
+                    warn!("Kaspa is not synced (or P2P IBD still active), waiting before starting bridge");
+                    last_slow_warn = now;
+                }
+            }
+
+            match shutdown_rx.as_mut() {
+                Some(rx) => {
+                    tokio::select! {
+                        _ = rx.wait_for(|v| *v) => return false,
+                        _ = sleep(MINING_READY_STABLE_POLL) => {}
+                    }
+                }
+                None => sleep(MINING_READY_STABLE_POLL).await,
+            }
+        }
+    }
+
     /// Block until the node reports fully synced. Logs at WARN on each wait cycle (same message as startup).
     async fn wait_for_sync(&self) -> Result<()> {
-        loop {
-            if self.is_node_synced_for_mining().await {
-                break;
-            }
-            warn!("Kaspa is not synced (or P2P IBD still active), waiting before starting bridge");
-            sleep(Duration::from_secs(10)).await;
-        }
-
+        self.wait_until_mining_ready_stable(None).await;
         Ok(())
     }
 
     pub async fn wait_for_sync_with_shutdown(&self, mut shutdown_rx: watch::Receiver<bool>) -> Result<()> {
         debug!("checking kaspad sync state");
-
-        loop {
-            let ready_fut = self.is_node_synced_for_mining();
-            let ready = tokio::select! {
-                _ = shutdown_rx.wait_for(|v| *v) => {
-                    return Err(anyhow::anyhow!("shutdown requested"));
-                }
-                r = ready_fut => r,
-            };
-
-            if ready {
-                debug!("kaspad synced (no P2P IBD), starting server");
-                break;
-            }
-
-            warn!("Kaspa is not synced (or P2P IBD still active), waiting for sync before starting bridge");
-
-            tokio::select! {
-                _ = shutdown_rx.wait_for(|v| *v) => {
-                    return Err(anyhow::anyhow!("shutdown requested"));
-                }
-                _ = sleep(Duration::from_secs(10)) => {}
-            }
+        if !self.wait_until_mining_ready_stable(Some(&mut shutdown_rx)).await {
+            return Err(anyhow::anyhow!("shutdown requested"));
         }
-
+        debug!("kaspad mining-ready (stable window passed), starting stratum");
         Ok(())
     }
 
@@ -904,31 +941,10 @@ impl KaspaApi {
 
     /// Block until synced or shutdown requested (`shutdown` watch is `true`). Returns `false` if shutting down.
     async fn block_until_synced_or_shutdown(api: Arc<Self>, shutdown_rx: &mut watch::Receiver<bool>) -> bool {
-        loop {
-            if *shutdown_rx.borrow() {
-                return false;
-            }
-
-            let ready_fut = api.is_node_synced_for_mining();
-            let ready = tokio::select! {
-                _ = shutdown_rx.wait_for(|v| *v) => {
-                    return false;
-                }
-                r = ready_fut => r,
-            };
-
-            if ready {
-                return true;
-            }
-            warn!("Kaspa is not synced (or P2P IBD still active), waiting for sync before starting bridge");
-
-            tokio::select! {
-                _ = shutdown_rx.wait_for(|v| *v) => {
-                    return false;
-                }
-                _ = sleep(Duration::from_secs(10)) => {}
-            }
+        if *shutdown_rx.borrow() {
+            return false;
         }
+        api.wait_until_mining_ready_stable(Some(shutdown_rx)).await
     }
 
     /// Start listening for block template notifications
