@@ -727,7 +727,7 @@ impl KaspaApi {
     async fn wait_until_mining_ready_stable(&self, mut shutdown_rx: Option<&mut watch::Receiver<bool>>) -> bool {
         let mut stable_since: Option<Instant> = None;
         // So the first "not synced" path can warn without waiting 10s from process start.
-        let mut last_slow_warn = Instant::now().saturating_sub(Duration::from_secs(30));
+        let mut last_slow_warn = Instant::now() - Duration::from_secs(30);
 
         loop {
             if let Some(rx) = shutdown_rx.as_mut() {
