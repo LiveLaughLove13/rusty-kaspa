@@ -24,11 +24,27 @@ pub fn normalize_port(port_or_addr: &str) -> String {
 
 /// Convert a port-or-address string into a concrete bind address suitable for `SocketAddr::parse()`.
 ///
-/// `":3030"` becomes `"0.0.0.0:3030"` for backward compatibility with existing config.
+/// Used for **Stratum** listeners. Port-only forms (`:5555`, `5555`) bind to **`0.0.0.0`** so miners
+/// on the LAN can connect. For dashboard/metrics HTTP, use [`bind_addr_for_operator_http`] instead.
 pub fn bind_addr_from_port(port_or_addr: &str) -> String {
     let s = normalize_port(port_or_addr);
     if s.is_empty() {
         return s;
     }
     if s.starts_with(':') { format!("0.0.0.0{}", s) } else { s }
+}
+
+/// Bind address for **web dashboard** and **per-instance Prometheus HTTP** (operator-facing).
+///
+/// Port-only config (`:3030`, `3030`) defaults to **`127.0.0.1`** so a typical home setup does not
+/// expose `/api/*` and `/metrics` to the whole LAN or internet.
+///
+/// To listen on all interfaces (e.g. open the dashboard from another device on your network), set an
+/// explicit address such as `0.0.0.0:3030` or `192.168.1.10:3030`.
+pub fn bind_addr_for_operator_http(port_or_addr: &str) -> String {
+    let s = normalize_port(port_or_addr);
+    if s.is_empty() {
+        return s;
+    }
+    if s.starts_with(':') { format!("127.0.0.1{}", s) } else { s }
 }

@@ -160,6 +160,7 @@ fn log_bridge_configuration(config: &BridgeConfig) {
     tracing::info!("\tpow2 clamp:      {}", config.global.pow2_clamp);
     tracing::info!("\textranonce:      auto-detected per client");
     tracing::info!("\thealth check:    {}", config.global.health_check_port);
+    tracing::info!("\tapprox geo IP:   {} (HTTP lookup; requires rkstratum_geoip build)", config.global.approximate_geo_lookup);
 
     for (idx, instance) in config.instances.iter().enumerate() {
         tracing::info!("\t--- Instance {} ---", idx + 1);
@@ -193,6 +194,9 @@ async fn main() -> Result<(), anyhow::Error> {
 
     let mut config = initialize_config();
     apply_cli_overrides(&mut config, &cli)?;
+
+    kaspa_stratum_bridge::host_metrics::set_embedded_kaspad(node_mode == NodeMode::Inprocess);
+    kaspa_stratum_bridge::host_metrics::set_geoip_enabled_from_config(config.global.approximate_geo_lookup);
 
     // Initialize color support detection
     LogColors::init();
@@ -256,6 +260,11 @@ async fn main() -> Result<(), anyhow::Error> {
         argv.push(OsString::from("kaspad"));
         argv.extend(node_args.iter().map(OsString::from));
         let args = kaspad_args::Args::parse(argv).map_err(|e| anyhow::anyhow!("{}", e))?;
+        // So host metrics can resolve the same volume as "This PC" / `df` (total / free space for appdir).
+        #[cfg(feature = "rkstratum_host_metrics")]
+        if let Some(ref dir) = args.appdir {
+            kaspa_stratum_bridge::host_metrics::set_node_data_path(Some(PathBuf::from(dir)));
+        }
         inprocess_node = Some(InProcessNode::start_from_args(args)?);
     }
 
