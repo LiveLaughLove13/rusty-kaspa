@@ -427,12 +427,19 @@ impl KaspaApi {
             snapshot.last_updated_unix_ms = SystemTime::now().duration_since(UNIX_EPOCH).ok().map(|d| d.as_millis() as u64);
             snapshot.is_connected = connected;
 
-            // Prefer `getSyncStatus` over `getServerInfo.is_synced`: the latter can be true during
-            // transitional IBD while the former matches mining-safe "fully synced" semantics.
-            snapshot.is_synced = match sync_res {
+            // Prefer `getSyncStatus` over `getServerInfo.is_synced`; also hide "synced" while any
+            // peer is the active P2P IBD peer (consensus can look ready during body/header catch-up).
+            let mut synced = match sync_res {
                 Ok(v) => Some(v),
                 Err(_) => server_info.as_ref().ok().map(|s| s.is_synced),
             };
+            if let Ok(peers) = &peers_info
+                && synced == Some(true)
+                && peers.peer_info.iter().any(|p| p.is_ibd_peer)
+            {
+                synced = Some(false);
+            }
+            snapshot.is_synced = synced;
 
             if let Ok(server_info) = server_info {
                 snapshot.network_id = Some(format!("{:?}", server_info.network_id));
@@ -669,24 +676,29 @@ impl KaspaApi {
         result
     }
 
-    /// Same criteria as the node's `getSyncStatus` RPC (sink recent + not in transitional IBD).
+    /// Mining-safe sync: node's `getSyncStatus` (sink recent + not in transitional IBD) **and** no
+    /// active P2P IBD peer (`getConnectedPeerInfo`: `is_ibd_peer`). Consensus can leave transitional
+    /// IBD while body/header catch-up is still running; the node marks the sync peer with `is_ibd_peer`.
     pub async fn is_node_synced_for_mining(&self) -> bool {
-        self.client.get_sync_status().await.unwrap_or(false)
+        if !self.client.get_sync_status().await.unwrap_or(false) {
+            return false;
+        }
+        match self.client.get_connected_peer_info_call(None, GetConnectedPeerInfoRequest {}).await {
+            Ok(resp) => !resp.peer_info.iter().any(|p| p.is_ibd_peer),
+            Err(e) => {
+                debug!("getConnectedPeerInfo failed while checking P2P IBD; treating as mining-ready: {}", e);
+                true
+            }
+        }
     }
 
     /// Block until the node reports fully synced. Logs at WARN on each wait cycle (same message as startup).
     async fn wait_for_sync(&self) -> Result<()> {
         loop {
-            match self.client.get_sync_status().await {
-                Ok(true) => break,
-                Ok(false) => {
-                    warn!("Kaspa is not synced, waiting for sync before starting bridge");
-                }
-                Err(e) => {
-                    warn!("failed to get sync status: {}, retrying...", e);
-                }
+            if self.is_node_synced_for_mining().await {
+                break;
             }
-
+            warn!("Kaspa is not synced (or P2P IBD still active), waiting before starting bridge");
             sleep(Duration::from_secs(10)).await;
         }
 
@@ -697,27 +709,20 @@ impl KaspaApi {
         debug!("checking kaspad sync state");
 
         loop {
-            let sync_fut = self.client.get_sync_status();
-            let sync_res = tokio::select! {
+            let ready_fut = self.is_node_synced_for_mining();
+            let ready = tokio::select! {
                 _ = shutdown_rx.wait_for(|v| *v) => {
                     return Err(anyhow::anyhow!("shutdown requested"));
                 }
-                res = sync_fut => res,
+                r = ready_fut => r,
             };
 
-            match sync_res {
-                Ok(is_synced) => {
-                    if is_synced {
-                        debug!("kaspad synced, starting server");
-                        break;
-                    }
-                }
-                Err(e) => {
-                    warn!("failed to get sync status: {}, retrying...", e);
-                }
+            if ready {
+                debug!("kaspad synced (no P2P IBD), starting server");
+                break;
             }
 
-            warn!("Kaspa is not synced, waiting for sync before starting bridge");
+            warn!("Kaspa is not synced (or P2P IBD still active), waiting for sync before starting bridge");
 
             tokio::select! {
                 _ = shutdown_rx.wait_for(|v| *v) => {
@@ -877,23 +882,18 @@ impl KaspaApi {
                 return false;
             }
 
-            let sync_fut = api.client.get_sync_status();
-            let sync_res = tokio::select! {
+            let ready_fut = api.is_node_synced_for_mining();
+            let ready = tokio::select! {
                 _ = shutdown_rx.wait_for(|v| *v) => {
                     return false;
                 }
-                res = sync_fut => res,
+                r = ready_fut => r,
             };
 
-            match sync_res {
-                Ok(true) => return true,
-                Ok(false) => {
-                    warn!("Kaspa is not synced, waiting for sync before starting bridge");
-                }
-                Err(e) => {
-                    warn!("failed to get sync status: {}, retrying...", e);
-                }
+            if ready {
+                return true;
             }
+            warn!("Kaspa is not synced (or P2P IBD still active), waiting for sync before starting bridge");
 
             tokio::select! {
                 _ = shutdown_rx.wait_for(|v| *v) => {
@@ -908,8 +908,8 @@ impl KaspaApi {
     /// Uses RegisterForNewBlockTemplateNotifications with ticker fallback
     /// This provides immediate notifications when new blocks are available, with polling as fallback
     ///
-    /// **Sync safety:** templates are only dispatched while `getSyncStatus` is true. If the node
-    /// falls back into IBD/catch-up, we stop calling the callback until sync completes again.
+    /// **Sync safety:** templates are only dispatched while the node is mining-ready (same as
+    /// [`is_node_synced_for_mining`]). If sync is lost or P2P IBD resumes, we stop calling the callback.
     pub async fn start_block_template_listener<F>(self: Arc<Self>, block_wait_time: Duration, mut block_cb: F) -> Result<()>
     where
         F: FnMut() + Send + 'static,
