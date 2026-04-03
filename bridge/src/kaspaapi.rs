@@ -427,8 +427,8 @@ impl KaspaApi {
             snapshot.last_updated_unix_ms = SystemTime::now().duration_since(UNIX_EPOCH).ok().map(|d| d.as_millis() as u64);
             snapshot.is_connected = connected;
 
-            // Prefer `getSyncStatus` over `getServerInfo.is_synced`; also hide "synced" while any
-            // peer is the active P2P IBD peer (consensus can look ready during body/header catch-up).
+            // Prefer `getSyncStatus` over `getServerInfo.is_synced`; clear "synced" while any peer is
+            // the P2P IBD peer, or while DAG bodies lag headers (`block_count != header_count`).
             let mut synced = match sync_res {
                 Ok(v) => Some(v),
                 Err(_) => server_info.as_ref().ok().map(|s| s.is_synced),
@@ -436,6 +436,12 @@ impl KaspaApi {
             if let Ok(peers) = &peers_info
                 && synced == Some(true)
                 && peers.peer_info.iter().any(|p| p.is_ibd_peer)
+            {
+                synced = Some(false);
+            }
+            if let Ok(dag) = &dag_info
+                && synced == Some(true)
+                && dag.block_count != dag.header_count
             {
                 synced = Some(false);
             }
@@ -479,7 +485,7 @@ impl KaspaApi {
     pub async fn submit_block(&self, block: Block) -> Result<SubmitBlockResponse> {
         if !self.is_node_synced_for_mining().await {
             return Err(anyhow::anyhow!(
-                "refusing block submit: node not mining-ready (sync / transitional IBD / P2P IBD in progress)"
+                "refusing block submit: node not mining-ready (sync, P2P IBD, or DAG block/header count mismatch)"
             ));
         }
 
@@ -678,18 +684,35 @@ impl KaspaApi {
         result
     }
 
-    /// Mining-safe sync: node's `getSyncStatus` (sink recent + not in transitional IBD) **and** no
-    /// active P2P IBD peer (`getConnectedPeerInfo`: `is_ibd_peer`). Consensus can leave transitional
-    /// IBD while body/header catch-up is still running; the node marks the sync peer with `is_ibd_peer`.
+    /// Mining-safe sync: node's `getSyncStatus` (sink recent + not in transitional IBD), no active
+    /// P2P IBD peer (`getConnectedPeerInfo`: `is_ibd_peer`), and `getBlockDagInfo` **block/header
+    /// parity** (`block_count == header_count`). Headers can run ahead of bodies during catch-up; the
+    /// dashboard `blk=a/b` line reflects the same counts.
     pub async fn is_node_synced_for_mining(&self) -> bool {
         if !self.client.get_sync_status().await.unwrap_or(false) {
             return false;
         }
-        match self.client.get_connected_peer_info_call(None, GetConnectedPeerInfoRequest {}).await {
-            Ok(resp) => !resp.peer_info.iter().any(|p| p.is_ibd_peer),
+
+        let peers_fut = self.client.get_connected_peer_info_call(None, GetConnectedPeerInfoRequest {});
+        let dag_fut = self.client.get_block_dag_info_call(None, GetBlockDagInfoRequest {});
+        let (peers_res, dag_res) = tokio::join!(peers_fut, dag_fut);
+
+        let ibd_peer_active = match &peers_res {
+            Ok(resp) => resp.peer_info.iter().any(|p| p.is_ibd_peer),
             Err(e) => {
-                debug!("getConnectedPeerInfo failed while checking P2P IBD; treating as mining-ready: {}", e);
-                true
+                debug!("getConnectedPeerInfo failed while checking P2P IBD; ignoring IBD-peer gate: {}", e);
+                false
+            }
+        };
+        if ibd_peer_active {
+            return false;
+        }
+
+        match &dag_res {
+            Ok(dag) => dag.block_count == dag.header_count,
+            Err(e) => {
+                debug!("getBlockDagInfo failed while checking block/header parity; not mining-ready: {}", e);
+                false
             }
         }
     }
@@ -746,7 +769,7 @@ impl KaspaApi {
     pub async fn get_block_template(&self, wallet_addr: &str, _remote_app: &str, _canxium_addr: &str) -> Result<Block> {
         if !self.is_node_synced_for_mining().await {
             return Err(anyhow::anyhow!(
-                "refusing block template: node not mining-ready (sync / transitional IBD / P2P IBD in progress)"
+                "refusing block template: node not mining-ready (sync, P2P IBD, or DAG block/header count mismatch)"
             ));
         }
 
