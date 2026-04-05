@@ -15,6 +15,7 @@ pub mod prom;
 pub mod rkstratum_cpu_miner;
 pub mod share_handler;
 pub mod stratum_context;
+pub mod stratum_line_codec;
 pub mod stratum_listener;
 pub mod stratum_server;
 
