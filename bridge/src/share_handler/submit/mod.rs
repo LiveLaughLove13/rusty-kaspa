@@ -2,6 +2,7 @@
 //!
 //! Submodules: [`parse`], [`duplicate`], [`pow_loop`], [`finish`]; [`handle`] wires them in order.
 
+mod block_submit;
 mod duplicate;
 mod error;
 pub use error::{SubmitError, SubmitRunError};

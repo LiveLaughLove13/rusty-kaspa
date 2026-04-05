@@ -1,10 +1,10 @@
 use crate::{
+    BridgeError,
     client_handler::ClientHandler,
     default_client::{default_handlers, handle_authorize, handle_subscribe},
     jsonrpc_event::JsonRpcEvent,
     kaspaapi::KaspaApi,
     share_handler::{KaspaApiTrait, ShareHandler},
-    stratum::stratum_handler_error::StratumHandlerError,
     stratum_context::StratumContext,
     stratum_listener::{StratumListener, StratumListenerConfig},
 };
@@ -149,7 +149,7 @@ async fn listen_and_serve_impl<T: KaspaApiTrait + Send + Sync + 'static>(
             let kaspa_api = Arc::clone(&kaspa_api);
             let ctx_clone = Arc::clone(&ctx);
             Box::pin(async move {
-                share_handler.handle_submit(ctx_clone, event, kaspa_api).await.map_err(|e| StratumHandlerError::from(e).into_boxed())
+                share_handler.handle_submit(ctx_clone, event, kaspa_api).await.map_err(|e| BridgeError::from(e).into_boxed_stratum())
             })
                 as std::pin::Pin<Box<dyn std::future::Future<Output = Result<(), Box<dyn std::error::Error + Send + Sync>>> + Send>>
         }) as crate::stratum_listener::EventHandler

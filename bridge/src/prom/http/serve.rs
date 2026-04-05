@@ -4,15 +4,20 @@
 //! Meant for a trusted LAN or VPN, not a public multi-tenant API. `POST /api/config` is disabled unless
 //! [`config_write_allowed`] is true. JSON responses include `X-Content-Type-Options` and `Referrer-Policy`
 //! without changing bodies or `Access-Control-Allow-Origin` behavior used by dashboards.
+//!
+//! Optional hardening for `/api/config` is in [`super::ops_access`] (bearer token, CSRF header, localhost-only,
+//! POST rate limit). **TLS:** terminate HTTPS in front of the bridge (reverse proxy or load balancer).
 
 use super::super::metrics::{filter_metric_families_for_instance, init_metrics};
 use super::config_api::{config_write_allowed, get_config_json, get_web_status_config, update_config_from_json};
+use super::ops_access::{ConfigRouteDeny, check_config_route_access};
 use super::static_files::{content_type_for_path, try_read_static_file};
 use super::stats_json::{get_stats_json, get_stats_json_all};
 use crate::host_metrics::{geoip_effective, get_host_snapshot, host_metrics_compiled};
 use crate::kaspaapi::node_status_for_api;
 use crate::net_utils::bind_addr_for_operator_http;
 use serde::Serialize;
+use std::net::SocketAddr;
 #[derive(Serialize)]
 struct WebStatusResponse {
     kaspad_address: String,
@@ -49,6 +54,22 @@ fn json_forbidden_headers(content_len: usize) -> String {
     )
 }
 
+fn json_deny_response(deny: ConfigRouteDeny) -> String {
+    let body = deny.json_body();
+    let status = match deny.status_code() {
+        401 => "401 Unauthorized",
+        403 => "403 Forbidden",
+        429 => "429 Too Many Requests",
+        _ => "403 Forbidden",
+    };
+    format!(
+        "HTTP/1.1 {}\r\nContent-Type: application/json\r\nX-Content-Type-Options: nosniff\r\nReferrer-Policy: no-referrer\r\nAccess-Control-Allow-Origin: *\r\nContent-Length: {}\r\n\r\n{}",
+        status,
+        body.len(),
+        body
+    )
+}
+
 async fn write_response(
     mut stream: tokio::net::TcpStream,
     response: String,
@@ -66,6 +87,7 @@ pub(crate) async fn handle_http_request(
     mut stream: tokio::net::TcpStream,
     request: &str,
     mode: &HttpMode,
+    peer: SocketAddr,
 ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     use tokio::io::AsyncWriteExt;
 
@@ -138,6 +160,11 @@ pub(crate) async fn handle_http_request(
     }
 
     if matches!(mode, HttpMode::Instance { .. }) && request.starts_with("GET /api/config") {
+        if let Err(deny) = check_config_route_access(request, peer.ip(), false) {
+            let response = json_deny_response(deny);
+            stream.write_all(response.as_bytes()).await?;
+            return Ok(());
+        }
         let config_json = get_config_json().await;
         let response = format!("{}{}", json_ok_headers(config_json.len()), config_json);
         stream.write_all(response.as_bytes()).await?;
@@ -145,6 +172,11 @@ pub(crate) async fn handle_http_request(
     }
 
     if matches!(mode, HttpMode::Instance { .. }) && request.starts_with("POST /api/config") {
+        if let Err(deny) = check_config_route_access(request, peer.ip(), true) {
+            let response = json_deny_response(deny);
+            stream.write_all(response.as_bytes()).await?;
+            return Ok(());
+        }
         if !config_write_allowed() {
             let json_response =
                 r#"{"success": false, "message": "Config write disabled. Set RKSTRATUM_ALLOW_CONFIG_WRITE=1 to enable."}"#;
@@ -185,12 +217,12 @@ async fn serve_http_loop(listener: tokio::net::TcpListener, mode: HttpMode) -> R
     use tokio::io::AsyncReadExt;
 
     loop {
-        let (mut stream, _) = listener.accept().await?;
+        let (mut stream, peer) = listener.accept().await?;
         let mut buffer = [0; 8192];
 
         if let Ok(n) = stream.read(&mut buffer).await {
             let request = String::from_utf8_lossy(&buffer[..n]);
-            let _ = handle_http_request(stream, &request, &mode).await;
+            let _ = handle_http_request(stream, &request, &mode, peer).await;
         }
     }
 }

@@ -3,6 +3,7 @@
 //! Split across `static_files`, `stats_json/` (types + parse + aggregate), `config_api`, and `serve`.
 
 mod config_api;
+mod ops_access;
 mod serve;
 mod static_files;
 mod stats_json;
@@ -23,8 +24,8 @@ mod tests {
         let addr = listener.local_addr().unwrap();
         let request = request.to_string();
         let server = tokio::spawn(async move {
-            let (stream, _) = listener.accept().await.unwrap();
-            handle_http_request(stream, &request, &mode).await.unwrap();
+            let (stream, peer) = listener.accept().await.unwrap();
+            handle_http_request(stream, &request, &mode, peer).await.unwrap();
         });
 
         let mut client = tokio::net::TcpStream::connect(addr).await.unwrap();

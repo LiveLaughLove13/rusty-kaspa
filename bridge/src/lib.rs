@@ -27,7 +27,6 @@ mod stratum {
     pub mod client_handler;
     pub mod default_client;
     pub mod stratum_context;
-    pub(crate) mod stratum_handler_error;
     pub mod stratum_line_codec;
     pub mod stratum_listener;
     pub mod stratum_server;
@@ -71,10 +70,13 @@ pub use util::net_utils;
 pub mod prom;
 pub mod share_handler;
 
+mod bridge_error;
+
 #[cfg(feature = "rkstratum_cpu_miner")]
 pub use cpu_miner::rkstratum_cpu_miner;
 
 pub use app_config::{BridgeConfig, InstanceConfig};
+pub use bridge_error::BridgeError;
 pub use client_handler::ClientHandler;
 pub use default_client::{default_handlers, default_logger};
 pub use errors::ErrorShortCode;
