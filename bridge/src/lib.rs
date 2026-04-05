@@ -3,8 +3,9 @@
 //! Implementation files are grouped under `util/`, `jsonrpc/`, `mining/`, `stratum/`, `config/`,
 //! `kaspa/`, `host/`, and `cpu_miner/`. Submodules such as `stratum_line_codec`, `kaspaapi`, and
 //! `pow_diagnostic` keep stable paths. The crate root lists re-exports explicitly (no glob
-//! re-exports) so the surface is clear: YAML/config [`BridgeConfig`](app_config::BridgeConfig) vs
-//! per-instance [`StratumServerBridgeConfig`](stratum_server::BridgeConfig) for the stratum listener.
+//! re-exports). YAML/config `BridgeConfig` comes from `app_config`; per-instance stratum settings
+//! use `StratumServerBridgeConfig` (the stratum listener’s `BridgeConfig`). Internal CPU miner prom
+//! helpers are only on `prom` when built with `rkstratum_cpu_miner`.
 
 mod util {
     pub mod errors;
@@ -93,8 +94,6 @@ pub use prom::{
     start_prom_server, start_web_server_all, update_worker_difficulty,
 };
 #[cfg(feature = "rkstratum_cpu_miner")]
-pub use prom::{record_internal_cpu_miner_snapshot, record_internal_cpu_recent_block, set_internal_cpu_mining_address};
-#[cfg(feature = "rkstratum_cpu_miner")]
 pub use rkstratum_cpu_miner::{InternalCpuMinerConfig, InternalMinerMetrics, spawn_internal_cpu_miner};
 pub use share_handler::{KaspaApiTrait, STATS_PRINTER_STARTED, ShareHandler, WorkStats};
 #[cfg(feature = "rkstratum_cpu_miner")]
@@ -104,6 +103,6 @@ pub use stratum_line_codec::{line_looks_like_http, push_lossy_and_drain_lines, s
 pub use stratum_listener::{
     EventHandler, StateGenerator, StratumClientListener, StratumListener, StratumListenerConfig, StratumStats,
 };
-/// Per-instance stratum listener settings (distinct from [`BridgeConfig`] in `app_config`).
+/// Per-instance stratum listener settings (distinct from `BridgeConfig` in `app_config`).
 pub use stratum_server::BridgeConfig as StratumServerBridgeConfig;
 pub use stratum_server::{listen_and_serve, listen_and_serve_with_shutdown, start_block_template_listener_with_api};

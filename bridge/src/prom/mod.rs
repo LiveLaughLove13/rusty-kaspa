@@ -1,5 +1,5 @@
 //! Prometheus metrics, worker counters, and HTTP dashboard (`/metrics`, `/api/*`, static files).
-//! Split into [`metrics`] (registries + record helpers) and [`http`] (TCP HTTP server).
+//! Implementation is split across private `metrics` and `http` submodules.
 
 mod http;
 mod metrics;
