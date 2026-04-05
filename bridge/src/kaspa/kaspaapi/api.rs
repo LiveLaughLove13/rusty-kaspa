@@ -11,10 +11,8 @@ use kaspa_rpc_core::{
     GetServerInfoRequest, GetSinkBlueScoreRequest, Notification, RpcHash, RpcRawBlock, SubmitBlockRequest, SubmitBlockResponse,
     api::rpc::RpcApi,
 };
-use once_cell::sync::Lazy;
 use parking_lot::Mutex;
-use serde::Serialize;
-use std::collections::{HashMap, VecDeque};
+use std::collections::HashMap;
 use std::str::FromStr;
 use std::sync::Arc;
 use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
@@ -23,189 +21,12 @@ use tokio::sync::watch;
 use tokio::time::sleep;
 use tracing::{debug, error, info, warn};
 
-const STRATUM_COINBASE_TAG_BYTES: &[u8] = b"RK-Stratum";
-const MAX_COINBASE_TAG_SUFFIX_LEN: usize = 64;
+use super::block_submit_guard::BLOCK_SUBMIT_GUARD;
+use super::coinbase_tag::build_coinbase_tag_bytes;
+use super::node_status::NODE_STATUS;
 
-/// Mining-ready must hold continuously at least this long before binding stratum. From disk the node
-/// can report parity + no IBD peer for a short window before P2P schedules IBD (race on cold/extra connect).
 const MIN_MINING_READY_STABLE: Duration = Duration::from_secs(2);
 const MINING_READY_STABLE_POLL: Duration = Duration::from_millis(400);
-
-fn sanitize_coinbase_tag_suffix(suffix: &str) -> Option<String> {
-    let suffix = suffix.trim().trim_start_matches('/');
-    if suffix.is_empty() {
-        return None;
-    }
-
-    let mut out = String::with_capacity(suffix.len().min(MAX_COINBASE_TAG_SUFFIX_LEN));
-    for ch in suffix.chars() {
-        if out.len() >= MAX_COINBASE_TAG_SUFFIX_LEN {
-            break;
-        }
-        if ch.is_ascii_alphanumeric() || matches!(ch, '.' | '_' | '-') {
-            out.push(ch);
-        } else if ch.is_ascii_whitespace() {
-            out.push('_');
-        }
-    }
-
-    let out = out.trim_matches('_').to_string();
-    if out.is_empty() { None } else { Some(out) }
-}
-
-fn build_coinbase_tag_bytes(suffix: Option<&str>) -> Vec<u8> {
-    let mut tag = STRATUM_COINBASE_TAG_BYTES.to_vec();
-    if let Some(suffix) = suffix.and_then(sanitize_coinbase_tag_suffix) {
-        tag.push(b'/');
-        tag.extend_from_slice(suffix.as_bytes());
-    }
-    tag
-}
-
-struct BlockSubmitGuard {
-    ttl: Duration,
-    max_entries: usize,
-    entries: HashMap<String, Instant>,
-    order: VecDeque<String>,
-}
-
-impl BlockSubmitGuard {
-    fn new(ttl: Duration, max_entries: usize) -> Self {
-        Self { ttl, max_entries, entries: HashMap::new(), order: VecDeque::new() }
-    }
-
-    fn prune(&mut self, now: Instant) {
-        while let Some(front) = self.order.front() {
-            let remove = match self.entries.get(front) {
-                Some(ts) => now.duration_since(*ts) > self.ttl,
-                None => true,
-            };
-            if remove {
-                if let Some(key) = self.order.pop_front() {
-                    self.entries.remove(&key);
-                }
-            } else {
-                break;
-            }
-        }
-
-        while self.entries.len() > self.max_entries {
-            if let Some(key) = self.order.pop_front() {
-                self.entries.remove(&key);
-            } else {
-                break;
-            }
-        }
-    }
-
-    fn try_mark(&mut self, hash: &str, now: Instant) -> bool {
-        self.prune(now);
-        if self.entries.contains_key(hash) {
-            return false;
-        }
-        self.entries.insert(hash.to_string(), now);
-        self.order.push_back(hash.to_string());
-        true
-    }
-
-    fn remove(&mut self, hash: &str, now: Instant) {
-        self.prune(now);
-        self.entries.remove(hash);
-    }
-}
-
-static BLOCK_SUBMIT_GUARD: Lazy<Mutex<BlockSubmitGuard>> =
-    Lazy::new(|| Mutex::new(BlockSubmitGuard::new(Duration::from_secs(600), 50_000)));
-
-#[derive(Clone, Debug, Default)]
-pub struct NodeStatusSnapshot {
-    pub last_updated: Option<std::time::Instant>,
-    /// Wall clock ms since UNIX epoch when the snapshot was last refreshed (for dashboards).
-    pub last_updated_unix_ms: Option<u64>,
-    pub is_connected: bool,
-    pub is_synced: Option<bool>,
-    pub network_id: Option<String>,
-    pub server_version: Option<String>,
-    pub virtual_daa_score: Option<u64>,
-    pub sink_blue_score: Option<u64>,
-    pub block_count: Option<u64>,
-    pub header_count: Option<u64>,
-    pub difficulty: Option<f64>,
-    pub tip_hash: Option<String>,
-    pub peers: Option<usize>,
-    pub mempool_size: Option<u64>,
-}
-
-pub static NODE_STATUS: Lazy<Mutex<NodeStatusSnapshot>> = Lazy::new(|| Mutex::new(NodeStatusSnapshot::default()));
-
-/// JSON-friendly node snapshot for `/api/status` (camelCase matches prior dashboard conventions for nested objects).
-#[derive(Debug, Clone, Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct NodeStatusApi {
-    pub is_connected: bool,
-    pub is_synced: Option<bool>,
-    pub network_id: Option<String>,
-    pub network_display: Option<String>,
-    pub server_version: Option<String>,
-    pub virtual_daa_score: Option<u64>,
-    pub sink_blue_score: Option<u64>,
-    pub block_count: Option<u64>,
-    pub header_count: Option<u64>,
-    /// DAG difficulty from the node (RPC); distinct from Prometheus-estimated network difficulty on the dashboard.
-    pub difficulty: Option<f64>,
-    pub tip_hash: Option<String>,
-    pub peers: Option<usize>,
-    pub mempool_size: Option<u64>,
-    pub last_updated_unix_ms: Option<u64>,
-}
-
-/// Short network label for UI (same parsing idea as the `[NODE]` log line).
-pub fn network_display_from_id(network_id: Option<&str>) -> Option<String> {
-    let net = network_id?.trim();
-    if net.is_empty() || net == "-" {
-        return None;
-    }
-    let mut network_type = None;
-    let mut suffix = None;
-    if let Some(pos) = net.find("network_type:") {
-        let s = &net[pos + "network_type:".len()..];
-        let s = s.trim_start();
-        network_type = s.split(&[',', '}'][..]).next().map(|v| v.trim());
-    }
-    if let Some(pos) = net.find("suffix:") {
-        let s = &net[pos + "suffix:".len()..];
-        let s = s.trim_start();
-        let raw = s.split(&[',', '}'][..]).next().map(|v| v.trim());
-        if raw != Some("None") {
-            suffix = raw;
-        }
-    }
-    Some(match (network_type, suffix) {
-        (Some(nt), Some(suf)) => format!("{}-{}", nt, suf),
-        (Some(nt), None) => nt.to_string(),
-        _ => net.to_string(),
-    })
-}
-
-pub fn node_status_for_api() -> NodeStatusApi {
-    let s = NODE_STATUS.lock();
-    NodeStatusApi {
-        is_connected: s.is_connected,
-        is_synced: s.is_synced,
-        network_id: s.network_id.clone(),
-        network_display: network_display_from_id(s.network_id.as_deref()),
-        server_version: s.server_version.clone(),
-        virtual_daa_score: s.virtual_daa_score,
-        sink_blue_score: s.sink_blue_score,
-        block_count: s.block_count,
-        header_count: s.header_count,
-        difficulty: s.difficulty,
-        tip_hash: s.tip_hash.clone(),
-        peers: s.peers,
-        mempool_size: s.mempool_size,
-        last_updated_unix_ms: s.last_updated_unix_ms,
-    }
-}
 
 /// Kaspa API client wrapper using RPC client
 /// Both use gRPC under the hood, but through an RPC client wrapper abstraction
