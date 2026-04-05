@@ -1166,7 +1166,7 @@ mod integration {
         };
 
         // Verify the config can be created (this tests the feature is available)
-        assert_eq!(miner_config.enabled, false);
+        assert!(!miner_config.enabled);
         assert_eq!(miner_config.threads, 1);
 
         // Create bridge config
@@ -2424,8 +2424,7 @@ mod comprehensive_tests {
         //     shutdown_rx: watch::Receiver<bool>,
         // ) -> Result<Arc<InternalMinerMetrics>, anyhow::Error>
 
-        // If we can compile this test, the feature is available
-        assert!(true, "CPU miner feature is available");
+        // If this test compiles and runs, the CPU miner feature is available.
     }
 
     // ========================================================================

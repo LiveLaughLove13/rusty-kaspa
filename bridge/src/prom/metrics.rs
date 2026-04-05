@@ -88,9 +88,9 @@ static INTERNAL_CPU_BLOCKS_ACCEPTED_TOTAL: OnceLock<Counter> = OnceLock::new();
 #[cfg(feature = "rkstratum_cpu_miner")]
 static INTERNAL_CPU_HASHRATE_GHS: OnceLock<Gauge> = OnceLock::new();
 #[cfg(feature = "rkstratum_cpu_miner")]
-static INTERNAL_CPU_MINING_ADDRESS: OnceLock<String> = OnceLock::new();
+pub(crate) static INTERNAL_CPU_MINING_ADDRESS: OnceLock<String> = OnceLock::new();
 #[cfg(feature = "rkstratum_cpu_miner")]
-static INTERNAL_CPU_RECENT_BLOCKS: OnceLock<parking_lot::Mutex<VecDeque<InternalCpuBlock>>> = OnceLock::new();
+pub(crate) static INTERNAL_CPU_RECENT_BLOCKS: OnceLock<parking_lot::Mutex<VecDeque<InternalCpuBlock>>> = OnceLock::new();
 #[cfg(feature = "rkstratum_cpu_miner")]
 const INTERNAL_CPU_RECENT_BLOCKS_LIMIT: usize = 256;
 
@@ -243,11 +243,11 @@ pub fn set_internal_cpu_mining_address(addr: String) {
 
 #[cfg(feature = "rkstratum_cpu_miner")]
 #[derive(Clone, Debug)]
-struct InternalCpuBlock {
-    timestamp_unix: u64,
-    bluescore: u64,
-    nonce: u64,
-    hash: String,
+pub(crate) struct InternalCpuBlock {
+    pub(crate) timestamp_unix: u64,
+    pub(crate) bluescore: u64,
+    pub(crate) nonce: u64,
+    pub(crate) hash: String,
 }
 
 /// Record a recently submitted internal CPU miner block so the dashboard can display it
