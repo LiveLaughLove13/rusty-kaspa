@@ -8,6 +8,7 @@ mod finish;
 mod handle;
 mod parse;
 mod pow_loop;
+mod pow_math;
 
 use super::ShareHandler;
 use super::kaspa_api_trait::KaspaApiTrait;

@@ -368,8 +368,7 @@ pub(crate) async fn spawn_client_listener(ctx: Arc<StratumContext>, handler_map:
                                     format!("String (length: {}, value: '{}')", s.len(), s)
                                 } else if param.is_number() {
                                     format!("Number (value: {})", param)
-                                } else if param.is_array() {
-                                    let arr = param.as_array().unwrap();
+                                } else if let Some(arr) = param.as_array() {
                                     format!(
                                         "Array (length: {}, items: {:?})",
                                         arr.len(),

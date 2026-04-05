@@ -3,8 +3,9 @@
 use super::super::ShareHandler;
 use super::super::duplicate_submit::DuplicateSubmitOutcome;
 use super::super::kaspa_api_trait::KaspaApiTrait;
-use super::error::SubmitRunError;
+use super::error::{BlockSubmitRejection, SubmitRunError, classify_block_submit_error_message};
 use super::parse::PreparedSubmit;
+use super::pow_math;
 use crate::{
     log_colors::LogColors,
     mining_state::GetMiningState,
@@ -14,7 +15,6 @@ use crate::{
     stratum_context::StratumContext,
 };
 use kaspa_consensus_core::block::Block;
-use num_bigint::BigUint;
 use num_traits::ToPrimitive;
 use num_traits::Zero;
 use std::sync::Arc;
@@ -115,7 +115,7 @@ pub(super) async fn run_pow_validation_loop(
         let network_target = calculate_target(header_clone.bits as u64);
 
         // Check if pow_value meets network target (lower hash is better)
-        let meets_network_target = pow_value <= network_target;
+        let meets_network_target = pow_math::meets_network_target_biguint(&pow_value, &network_target);
         // IMPORTANT: Use kaspa_pow's own compact-target handling as the source of truth.
         // This avoids any potential mismatch in our BigUint conversion/comparison path.
         pow_passed = check_passed;
@@ -427,7 +427,7 @@ pub(super) async fn run_pow_validation_loop(
                     error!("{} {} {} {}", prefix, LogColors::block("[BLOCK]"), LogColors::label("Blockhash:"), block_hash);
                     error!("{} {} {} {}", prefix, LogColors::block("[BLOCK]"), LogColors::error("Error:"), error_str);
 
-                    if error_str.contains("ErrDuplicateBlock") {
+                    if classify_block_submit_error_message(&error_str) == BlockSubmitRejection::DuplicateBlockStale {
                         // Block rejected, stale
                         warn!("{} {} {}", prefix, LogColors::block("[BLOCK]"), LogColors::error("block rejected, stale"));
                         warn!(
@@ -499,7 +499,7 @@ pub(super) async fn run_pow_validation_loop(
         }
 
         // Check pool difficulty
-        let pool_target = state.stratum_diff().map(|d| d.target_value.clone()).unwrap_or_else(BigUint::zero);
+        let pool_target = pow_math::pool_target_or_zero(state.stratum_diff().map(|d| d.target_value.clone()));
 
         // Compare FULL pow_value against pool_target (not just lower bits)
         // Compare full 256-bit values
@@ -522,7 +522,7 @@ pub(super) async fn run_pow_validation_loop(
                 pool_target,
                 target_len,
                 state.stratum_diff().map(|d| d.diff_value),
-                pow_value <= pool_target
+                !pow_math::share_too_weak_for_pool(&pow_value, &pool_target)
             );
             debug!(
                 "Full comparison - pow_value: {:x} ({} bytes), pool_target: {:x} ({} bytes)",
@@ -533,7 +533,7 @@ pub(super) async fn run_pow_validation_loop(
         // Check pool difficulty (stratum target)
         // If pow_value >= pool_target, share doesn't meet pool difficulty
         // Higher hash value means worse share
-        if pow_value >= pool_target {
+        if pow_math::share_too_weak_for_pool(&pow_value, &pool_target) {
             // Share doesn't meet pool difficulty - might be wrong job ID (moved to debug to keep terminal clean)
             let worker_name = ctx.identity.lock().worker_name.clone();
             debug!(
@@ -553,13 +553,11 @@ pub(super) async fn run_pow_validation_loop(
 
             // Job ID workaround for Bitmain/IceRiver ASICs - try previous jobs
             // Validate job ID: jobId == 1 || jobId%maxJobs == submitInfo.jobId%maxJobs+1
-            if current_job_id == 1 || (current_job_id % max_jobs == ((prep.job_id % max_jobs) + 1) % max_jobs) {
+            if pow_math::job_id_workaround_exhausted(current_job_id, prep.job_id, max_jobs) {
                 // Exhausted all previous blocks (wrapped around or reached job 1)
                 debug!("Job ID loop exhausted: current_job_id={}, job_id={}, max_jobs={}", current_job_id, prep.job_id, max_jobs);
                 break;
-            } else {
-                // Try previous job ID
-                let prev_job_id = current_job_id - 1;
+            } else if let Some(prev_job_id) = pow_math::previous_job_id(current_job_id) {
                 if let Some(prev_job) = state.get_job(prev_job_id) {
                     current_job_id = prev_job_id;
                     current_job = prev_job;
@@ -571,6 +569,8 @@ pub(super) async fn run_pow_validation_loop(
                     debug!("Previous job ID {} doesn't exist, exiting loop", prev_job_id);
                     break;
                 }
+            } else {
+                break;
             }
         } else {
             // Valid share (pow_value < pool_target) - moved to debug to keep terminal clean
