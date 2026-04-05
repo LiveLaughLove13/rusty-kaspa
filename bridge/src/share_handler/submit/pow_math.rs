@@ -32,11 +32,7 @@ pub(crate) fn job_id_workaround_exhausted(current_job_id: u64, submitted_job_id:
 /// Previous job id to validate, if any (`current_job_id > 1`).
 #[inline]
 pub(crate) fn previous_job_id(current_job_id: u64) -> Option<u64> {
-    if current_job_id > 1 {
-        Some(current_job_id - 1)
-    } else {
-        None
-    }
+    if current_job_id > 1 { Some(current_job_id - 1) } else { None }
 }
 
 /// Pool target for comparisons; `None` or zero target is treated like “no pool target” for logging only.

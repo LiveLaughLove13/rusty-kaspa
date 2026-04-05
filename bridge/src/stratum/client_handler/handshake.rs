@@ -18,11 +18,9 @@ pub fn assign_extranonce_for_miner(ctx: &StratumContext, remote_app: &str) {
     let extranonce = if required_extranonce_size > 0 {
         let max_extranonce = (2_f64.powi(16) - 1.0) as i32;
 
-        let extranonce_val = match GLOBAL_NEXT_EXTRANONCE.fetch_update(
-            Ordering::SeqCst,
-            Ordering::SeqCst,
-            |val| if val < max_extranonce { Some(val + 1) } else { Some(0) },
-        ) {
+        let extranonce_val = match GLOBAL_NEXT_EXTRANONCE
+            .fetch_update(Ordering::SeqCst, Ordering::SeqCst, |val| if val < max_extranonce { Some(val + 1) } else { Some(0) })
+        {
             Ok(prev) => {
                 if prev >= max_extranonce {
                     warn!("wrapped extranonce! new clients may be duplicating work...");

@@ -444,10 +444,7 @@ mod tests {
         assert_eq!(t0, t_neg);
         let t_one = diff_to_target(1.0);
         // Standard path: target = maxTarget/diff with diff scaled by 1e18, so diff==1.0 yields full maxTarget — same as diff<=0.
-        assert!(
-            t0 >= t_one,
-            "non-positive difficulty must not be stricter than diff=1.0"
-        );
+        assert!(t0 >= t_one, "non-positive difficulty must not be stricter than diff=1.0");
         let t_two = diff_to_target(2.0);
         assert!(t0 > t_two, "invalid/zero diff should be strictly easier than diff=2.0");
     }
