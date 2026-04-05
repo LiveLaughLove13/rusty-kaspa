@@ -1,7 +1,7 @@
 use std::collections::{HashMap, VecDeque};
 use std::time::{Duration, Instant};
 
-#[derive(Clone, Copy, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub(crate) enum DuplicateSubmitOutcome {
     InFlight,
     Accepted,
@@ -71,5 +71,63 @@ impl DuplicateSubmitGuard {
             e.ts = now;
             e.outcome = outcome;
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::thread;
+    use std::time::Duration;
+
+    #[test]
+    fn insert_then_get_inflight() {
+        let mut g = DuplicateSubmitGuard::new(Duration::from_secs(60), 100);
+        let now = Instant::now();
+        g.insert_inflight("a".to_string(), now);
+        assert_eq!(g.get("a", now), Some(DuplicateSubmitOutcome::InFlight));
+    }
+
+    #[test]
+    fn duplicate_insert_is_idempotent() {
+        let mut g = DuplicateSubmitGuard::new(Duration::from_secs(60), 100);
+        let now = Instant::now();
+        g.insert_inflight("k".to_string(), now);
+        g.insert_inflight("k".to_string(), now);
+        assert_eq!(g.get("k", now), Some(DuplicateSubmitOutcome::InFlight));
+    }
+
+    #[test]
+    fn set_outcome_updates_entry() {
+        let mut g = DuplicateSubmitGuard::new(Duration::from_secs(60), 100);
+        let now = Instant::now();
+        g.insert_inflight("h".to_string(), now);
+        let later = now + Duration::from_millis(1);
+        g.set_outcome("h", later, DuplicateSubmitOutcome::Accepted);
+        assert_eq!(g.get("h", later), Some(DuplicateSubmitOutcome::Accepted));
+    }
+
+    #[test]
+    fn ttl_prunes_old_entries() {
+        let mut g = DuplicateSubmitGuard::new(Duration::from_millis(30), 100);
+        let t0 = Instant::now();
+        g.insert_inflight("old".to_string(), t0);
+        thread::sleep(Duration::from_millis(80));
+        let now = Instant::now();
+        assert_eq!(g.get("old", now), None);
+    }
+
+    #[test]
+    fn max_entries_evicts_oldest() {
+        let mut g = DuplicateSubmitGuard::new(Duration::from_secs(600), 2);
+        let mut now = Instant::now();
+        g.insert_inflight("k1".to_string(), now);
+        now += Duration::from_millis(1);
+        g.insert_inflight("k2".to_string(), now);
+        now += Duration::from_millis(1);
+        g.insert_inflight("k3".to_string(), now);
+        assert_eq!(g.get("k1", now), None);
+        assert_eq!(g.get("k2", now), Some(DuplicateSubmitOutcome::InFlight));
+        assert_eq!(g.get("k3", now), Some(DuplicateSubmitOutcome::InFlight));
     }
 }

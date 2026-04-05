@@ -1058,40 +1058,20 @@ impl KaspaApi {
 
 #[async_trait::async_trait]
 impl KaspaApiTrait for KaspaApi {
-    async fn get_block_template(
-        &self,
-        wallet_addr: &str,
-        _remote_app: &str,
-        _canxium_addr: &str,
-    ) -> Result<Block, Box<dyn std::error::Error + Send + Sync>> {
-        KaspaApi::get_block_template(self, wallet_addr, "", "").await.map_err(|e| {
-            let error_msg = e.to_string();
-            Box::new(std::io::Error::other(error_msg)) as Box<dyn std::error::Error + Send + Sync>
-        })
+    async fn get_block_template(&self, wallet_addr: &str, _remote_app: &str, _canxium_addr: &str) -> Result<Block> {
+        KaspaApi::get_block_template(self, wallet_addr, "", "").await
     }
 
-    async fn submit_block(
-        &self,
-        block: Block,
-    ) -> Result<kaspa_rpc_core::SubmitBlockResponse, Box<dyn std::error::Error + Send + Sync>> {
-        KaspaApi::submit_block(self, block)
-            .await
-            .map_err(|e| Box::new(std::io::Error::other(e.to_string())) as Box<dyn std::error::Error + Send + Sync>)
+    async fn submit_block(&self, block: Block) -> Result<kaspa_rpc_core::SubmitBlockResponse> {
+        KaspaApi::submit_block(self, block).await
     }
 
-    async fn get_balances_by_addresses(
-        &self,
-        addresses: &[String],
-    ) -> Result<Vec<(String, u64)>, Box<dyn std::error::Error + Send + Sync>> {
-        KaspaApi::get_balances_by_addresses(self, addresses)
-            .await
-            .map_err(|e| Box::new(std::io::Error::other(e.to_string())) as Box<dyn std::error::Error + Send + Sync>)
+    async fn get_balances_by_addresses(&self, addresses: &[String]) -> Result<Vec<(String, u64)>> {
+        KaspaApi::get_balances_by_addresses(self, addresses).await
     }
 
-    async fn get_current_block_color(&self, block_hash: &str) -> Result<bool, Box<dyn std::error::Error + Send + Sync>> {
-        KaspaApi::get_current_block_color(self, block_hash)
-            .await
-            .map_err(|e| Box::new(std::io::Error::other(e.to_string())) as Box<dyn std::error::Error + Send + Sync>)
+    async fn get_current_block_color(&self, block_hash: &str) -> Result<bool> {
+        KaspaApi::get_current_block_color(self, block_hash).await
     }
 
     async fn is_node_synced_for_mining(&self) -> bool {

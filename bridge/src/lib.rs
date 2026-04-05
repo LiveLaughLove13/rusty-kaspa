@@ -1,8 +1,10 @@
 //! Kaspa Stratum bridge library.
 //!
 //! Implementation files are grouped under `util/`, `jsonrpc/`, `mining/`, `stratum/`, `config/`,
-//! `kaspa/`, `host/`, and `cpu_miner/`. The crate root re-exports the same module names as before
-//! so `kaspa_stratum_bridge::stratum_context`, `::mining_state`, etc. stay stable.
+//! `kaspa/`, `host/`, and `cpu_miner/`. Submodules such as `stratum_line_codec`, `kaspaapi`, and
+//! `pow_diagnostic` keep stable paths. The crate root lists re-exports explicitly (no glob
+//! re-exports) so the surface is clear: YAML/config [`BridgeConfig`](app_config::BridgeConfig) vs
+//! per-instance [`StratumServerBridgeConfig`](stratum_server::BridgeConfig) for the stratum listener.
 
 mod util {
     pub mod errors;
@@ -71,18 +73,36 @@ pub mod share_handler;
 pub use cpu_miner::rkstratum_cpu_miner;
 
 pub use app_config::{BridgeConfig, InstanceConfig};
-pub use client_handler::*;
-pub use default_client::*;
-pub use errors::*;
-pub use hasher::*;
-pub use jsonrpc_event::*;
-pub use kaspaapi::*;
-pub use mining_state::*;
-pub use prom::{WorkerContext, *};
+pub use client_handler::ClientHandler;
+pub use default_client::{default_handlers, default_logger};
+pub use errors::ErrorShortCode;
+pub use hasher::{
+    KaspaDiff, big_diff_to_little, calculate_target, diff_to_hash, diff_to_target, diff_to_target_alternative,
+    generate_iceriver_job_params, generate_job_header, generate_large_job_params, serialize_block_header,
+    stratum_difficulty_to_target_kaspa,
+};
+pub use jsonrpc_event::{JsonRpcEvent, JsonRpcResponse, StratumMethod, unmarshal_event, unmarshal_response};
+pub use kaspaapi::{KaspaApi, NODE_STATUS, NodeStatusApi, NodeStatusSnapshot, network_display_from_id, node_status_for_api};
+pub use log_colors::LogColors;
+pub use mining_state::{GetMiningState, Job, MiningState};
+pub use net_utils::{bind_addr_for_operator_http, bind_addr_from_port, normalize_port};
+pub use prom::{
+    WorkerContext, init_metrics, init_worker_counters, record_balances, record_block_accepted_by_node, record_block_found,
+    record_block_not_confirmed_blue, record_disconnect, record_dupe_share, record_internal_cpu_miner_snapshot,
+    record_internal_cpu_recent_block, record_invalid_share, record_network_stats, record_new_job, record_share_found,
+    record_stale_share, record_weak_share, record_worker_error, set_internal_cpu_mining_address, set_web_config_path,
+    set_web_status_config, start_prom_server, start_web_server_all, update_worker_difficulty,
+};
 #[cfg(feature = "rkstratum_cpu_miner")]
-pub use rkstratum_cpu_miner::*;
-pub use share_handler::*;
-pub use stratum_context::*;
-pub use stratum_listener::*;
+pub use rkstratum_cpu_miner::{InternalCpuMinerConfig, InternalMinerMetrics, spawn_internal_cpu_miner};
+pub use share_handler::{KaspaApiTrait, STATS_PRINTER_STARTED, ShareHandler, WorkStats};
+#[cfg(feature = "rkstratum_cpu_miner")]
+pub use share_handler::{RKSTRATUM_CPU_MINER_METRICS, set_rkstratum_cpu_miner_metrics};
+pub use stratum_context::{ContextSummary, ErrorDisconnected, StratumContext};
+pub use stratum_line_codec::{line_looks_like_http, push_lossy_and_drain_lines, strip_nul_bytes};
+pub use stratum_listener::{
+    EventHandler, StateGenerator, StratumClientListener, StratumListener, StratumListenerConfig, StratumStats,
+};
+/// Per-instance stratum listener settings (distinct from [`BridgeConfig`] in `app_config`).
 pub use stratum_server::BridgeConfig as StratumServerBridgeConfig;
-pub use stratum_server::*;
+pub use stratum_server::{listen_and_serve, listen_and_serve_with_shutdown, start_block_template_listener_with_api};
