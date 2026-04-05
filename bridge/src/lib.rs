@@ -88,11 +88,12 @@ pub use mining_state::{GetMiningState, Job, MiningState};
 pub use net_utils::{bind_addr_for_operator_http, bind_addr_from_port, normalize_port};
 pub use prom::{
     WorkerContext, init_metrics, init_worker_counters, record_balances, record_block_accepted_by_node, record_block_found,
-    record_block_not_confirmed_blue, record_disconnect, record_dupe_share, record_internal_cpu_miner_snapshot,
-    record_internal_cpu_recent_block, record_invalid_share, record_network_stats, record_new_job, record_share_found,
-    record_stale_share, record_weak_share, record_worker_error, set_internal_cpu_mining_address, set_web_config_path,
-    set_web_status_config, start_prom_server, start_web_server_all, update_worker_difficulty,
+    record_block_not_confirmed_blue, record_disconnect, record_dupe_share, record_invalid_share, record_network_stats, record_new_job,
+    record_share_found, record_stale_share, record_weak_share, record_worker_error, set_web_config_path, set_web_status_config,
+    start_prom_server, start_web_server_all, update_worker_difficulty,
 };
+#[cfg(feature = "rkstratum_cpu_miner")]
+pub use prom::{record_internal_cpu_miner_snapshot, record_internal_cpu_recent_block, set_internal_cpu_mining_address};
 #[cfg(feature = "rkstratum_cpu_miner")]
 pub use rkstratum_cpu_miner::{InternalCpuMinerConfig, InternalMinerMetrics, spawn_internal_cpu_miner};
 pub use share_handler::{KaspaApiTrait, STATS_PRINTER_STARTED, ShareHandler, WorkStats};
