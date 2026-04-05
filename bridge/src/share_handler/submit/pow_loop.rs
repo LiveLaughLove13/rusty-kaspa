@@ -292,9 +292,3 @@ pub(super) async fn run_pow_validation_loop(
 
     Ok(PowDone::Continue { invalid_share })
 }
-
-#[cfg(test)]
-mod pow_loop_smoke {
-    #[test]
-    fn module_linked() {}
-}

@@ -222,9 +222,3 @@ where
 
     Ok(())
 }
-
-#[cfg(test)]
-mod streams_smoke {
-    #[test]
-    fn module_linked() {}
-}

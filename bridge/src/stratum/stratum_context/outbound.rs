@@ -471,9 +471,3 @@ impl StratumContext {
         self.write_data(data.as_bytes()).await
     }
 }
-
-#[cfg(test)]
-mod outbound_smoke {
-    #[test]
-    fn module_linked() {}
-}

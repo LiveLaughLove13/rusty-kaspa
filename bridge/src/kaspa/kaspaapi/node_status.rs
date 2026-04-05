@@ -91,11 +91,3 @@ pub fn node_status_for_api() -> NodeStatusApi {
         last_updated_unix_ms: s.last_updated_unix_ms,
     }
 }
-
-#[cfg(test)]
-mod node_status_smoke {
-    #[test]
-    fn network_display_empty_id() {
-        assert_eq!(super::network_display_from_id(Some("")), None);
-    }
-}

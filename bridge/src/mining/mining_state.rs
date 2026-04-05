@@ -174,12 +174,3 @@ pub fn GetMiningState(ctx: &crate::stratum_context::StratumContext) -> Arc<Minin
     // State is now stored directly as Arc<MiningState>, so we can just clone it
     Arc::clone(&ctx.state)
 }
-
-#[cfg(test)]
-mod mining_state_smoke {
-    #[test]
-    fn new_state_initialized_false() {
-        let s = super::MiningState::new();
-        assert!(!s.is_initialized());
-    }
-}

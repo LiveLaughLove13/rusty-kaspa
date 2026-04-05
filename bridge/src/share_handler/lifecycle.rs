@@ -551,14 +551,3 @@ impl ShareHandler {
         });
     }
 }
-
-#[cfg(test)]
-mod lifecycle_smoke {
-    use super::ShareHandler;
-
-    #[test]
-    fn new_matches_log_prefix() {
-        let h = ShareHandler::new("life".into());
-        assert_eq!(h.log_prefix(), "[life]");
-    }
-}

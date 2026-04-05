@@ -219,9 +219,3 @@ impl ClientHandler {
         }
     }
 }
-
-#[cfg(test)]
-mod client_handler_mod_smoke {
-    #[test]
-    fn module_linked() {}
-}

@@ -31,9 +31,3 @@ pub(super) fn build_coinbase_tag_bytes(suffix: Option<&str>) -> Vec<u8> {
     }
     tag
 }
-
-#[cfg(test)]
-mod coinbase_tag_smoke {
-    #[test]
-    fn module_linked() {}
-}

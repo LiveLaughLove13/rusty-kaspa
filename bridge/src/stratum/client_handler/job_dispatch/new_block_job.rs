@@ -286,9 +286,3 @@ pub(crate) async fn new_block_job_task<T: KaspaApiTrait + Send + Sync + 'static>
         debug!("new_block_available: successfully sent job ID {} to client {}", job_id, client_clone.remote_addr);
     }
 }
-
-#[cfg(test)]
-mod new_block_job_smoke {
-    #[test]
-    fn module_linked() {}
-}

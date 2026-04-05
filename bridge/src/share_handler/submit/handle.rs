@@ -28,11 +28,3 @@ pub(super) async fn handle_submit(
         PowDone::Continue { invalid_share } => finish::after_pow_loop(handler, ctx, &event, &prep, invalid_share).await,
     }
 }
-
-#[cfg(test)]
-mod handle_smoke {
-    #[test]
-    fn module_linked() {
-        // `handle_submit` is `pub(super)`; this file is covered by integration-style tests.
-    }
-}

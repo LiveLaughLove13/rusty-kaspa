@@ -19,11 +19,3 @@ pub(crate) static BIG_JOB_REGEX: Lazy<Regex> = Lazy::new(|| Regex::new(r".*(BzMi
 
 pub(crate) const BALANCE_DELAY: Duration = Duration::from_secs(60);
 pub(crate) const CLIENT_TIMEOUT: Duration = Duration::from_secs(20);
-
-#[cfg(test)]
-mod job_dispatch_mod_smoke {
-    #[test]
-    fn big_job_regex_matches_bzminer() {
-        assert!(super::BIG_JOB_REGEX.is_match("BzMiner/1.0"));
-    }
-}

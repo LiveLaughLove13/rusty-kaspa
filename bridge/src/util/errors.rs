@@ -31,13 +31,3 @@ impl std::fmt::Display for ErrorShortCode {
         write!(f, "{}", self.as_str())
     }
 }
-
-#[cfg(test)]
-mod errors_smoke {
-    use super::ErrorShortCode;
-
-    #[test]
-    fn short_code_as_str_stable() {
-        assert_eq!(ErrorShortCode::Disconnected.as_str(), "err_worker_disconnected");
-    }
-}

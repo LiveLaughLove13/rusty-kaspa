@@ -17,9 +17,3 @@ pub(crate) fn spawn_health_check_server(health_port: String) {
         }
     });
 }
-
-#[cfg(test)]
-mod health_check_smoke {
-    #[test]
-    fn module_linked() {}
-}

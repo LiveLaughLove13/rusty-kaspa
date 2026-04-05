@@ -15,13 +15,3 @@ pub trait KaspaApiTrait: Send + Sync {
     /// `true` only when the node reports fully synced for mining (`getSyncStatus`: sink recent + not in transitional IBD).
     async fn is_node_synced_for_mining(&self) -> bool;
 }
-
-#[cfg(test)]
-mod kaspa_api_trait_smoke {
-    use super::KaspaApiTrait;
-
-    #[test]
-    fn trait_is_object_safe() {
-        let _: Option<&dyn KaspaApiTrait> = None;
-    }
-}

@@ -563,9 +563,3 @@ pub(crate) async fn get_stats_json(instance_id: &str) -> StatsResponse {
 pub(crate) async fn get_stats_json_all() -> StatsResponse {
     get_stats_json_filtered(None).await
 }
-
-#[cfg(test)]
-mod aggregate_smoke {
-    #[test]
-    fn module_linked() {}
-}

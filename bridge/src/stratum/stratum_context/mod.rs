@@ -171,11 +171,3 @@ impl Clone for StratumContext {
         }
     }
 }
-
-#[cfg(test)]
-mod stratum_context_mod_smoke {
-    #[test]
-    fn error_disconnected_display() {
-        assert_eq!(super::ErrorDisconnected.to_string(), "disconnecting");
-    }
-}

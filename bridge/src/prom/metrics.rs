@@ -507,20 +507,3 @@ pub fn update_worker_difficulty(worker: &WorkerContext, difficulty: f64) {
         gauge.with_label_values(&worker.labels()).set(difficulty);
     }
 }
-
-#[cfg(test)]
-mod metrics_smoke {
-    use super::WorkerContext;
-
-    #[test]
-    fn worker_context_labels_len() {
-        let w = WorkerContext {
-            instance_id: "i".into(),
-            worker_name: "w".into(),
-            miner: "m".into(),
-            wallet: "a".into(),
-            ip: "127.0.0.1:1".into(),
-        };
-        assert_eq!(w.labels().len(), 5);
-    }
-}

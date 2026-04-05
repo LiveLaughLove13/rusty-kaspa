@@ -181,9 +181,3 @@ pub(crate) async fn update_config_from_json(json_body: &str) -> Result<(), Box<d
 
     Ok(())
 }
-
-#[cfg(test)]
-mod config_api_smoke {
-    #[test]
-    fn module_linked() {}
-}

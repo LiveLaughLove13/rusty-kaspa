@@ -577,11 +577,3 @@ fn try_geo_lookup() -> Option<String> {
 fn try_geo_lookup() -> Option<String> {
     None
 }
-
-#[cfg(test)]
-mod host_metrics_smoke {
-    #[test]
-    fn host_snapshot_sized() {
-        let _ = core::mem::size_of::<super::HostSnapshot>();
-    }
-}

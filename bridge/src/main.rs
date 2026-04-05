@@ -27,12 +27,6 @@ mod tracing_setup;
 #[cfg(test)]
 mod tests;
 
-#[cfg(test)]
-mod main_smoke {
-    #[test]
-    fn binary_test_harness_linked() {}
-}
-
 use cli::{Cli, NodeMode, apply_cli_overrides};
 use inprocess_node::InProcessNode;
 use kaspa_stratum_bridge::BridgeConfig;

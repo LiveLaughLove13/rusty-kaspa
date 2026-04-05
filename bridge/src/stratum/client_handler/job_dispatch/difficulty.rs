@@ -32,9 +32,3 @@ pub fn send_client_diff(instance_id: &str, client: &StratumContext, _state: &Min
         debug!("[DIFFICULTY] Successfully sent difficulty {} to {}", diff, client_clone.remote_addr);
     });
 }
-
-#[cfg(test)]
-mod difficulty_smoke {
-    #[test]
-    fn module_linked() {}
-}

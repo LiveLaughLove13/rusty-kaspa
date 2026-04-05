@@ -6,11 +6,3 @@ mod metrics;
 
 pub use http::{set_web_config_path, set_web_status_config, start_prom_server, start_web_server_all};
 pub use metrics::*;
-
-#[cfg(test)]
-mod prom_mod_smoke {
-    #[test]
-    fn metrics_module_linked() {
-        let _ = core::mem::size_of::<super::metrics::WorkerContext>();
-    }
-}

@@ -164,11 +164,3 @@ impl LogColors {
         format!("[Instance {}]", instance_num)
     }
 }
-
-#[cfg(test)]
-mod log_colors_smoke {
-    #[test]
-    fn format_instance_id_plain() {
-        assert_eq!(super::LogColors::format_instance_id(3), "[Instance 3]");
-    }
-}

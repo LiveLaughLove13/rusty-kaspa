@@ -472,13 +472,3 @@ impl KaspaApiTrait for KaspaApi {
         KaspaApi::is_node_synced_for_mining(self).await
     }
 }
-
-#[cfg(test)]
-mod kaspa_api_impl_mod_smoke {
-    use crate::share_handler::KaspaApiTrait;
-
-    #[test]
-    fn kaspa_api_trait_object_safe() {
-        let _: Option<&dyn KaspaApiTrait> = None;
-    }
-}

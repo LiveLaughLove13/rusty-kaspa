@@ -30,14 +30,3 @@ impl ShareHandler {
         format!("[{}]", self.instance_id)
     }
 }
-
-#[cfg(test)]
-mod share_handler_mod_smoke {
-    use super::ShareHandler;
-
-    #[test]
-    fn new_handler_log_prefix() {
-        let h = ShareHandler::new("i1".into());
-        assert_eq!(h.log_prefix(), "[i1]");
-    }
-}

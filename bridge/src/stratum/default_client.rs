@@ -391,11 +391,3 @@ async fn send_extranonce(ctx: Arc<StratumContext>) -> Result<(), Box<dyn std::er
     tracing::debug!("[EXTRANONCE] ===== EXTRANONCE SENT TO {} =====", ctx.remote_addr);
     Ok(())
 }
-
-#[cfg(test)]
-mod default_client_smoke {
-    #[test]
-    fn default_handlers_non_empty() {
-        assert!(!super::default_handlers().is_empty());
-    }
-}

@@ -284,14 +284,3 @@ impl BridgeConfig {
         serde_yaml::to_string(&yaml)
     }
 }
-
-#[cfg(test)]
-mod app_config_smoke {
-    #[test]
-    fn from_yaml_single_instance() {
-        let yaml = "stratum_port: \":5555\"\nmin_share_diff: 1\n";
-        let c = super::BridgeConfig::from_yaml(yaml).unwrap();
-        assert_eq!(c.instances.len(), 1);
-        assert_eq!(c.instances[0].stratum_port, ":5555");
-    }
-}

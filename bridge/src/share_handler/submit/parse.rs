@@ -166,9 +166,3 @@ pub(super) fn prepare(handler: &ShareHandler, ctx: &StratumContext, event: &Json
 
     Ok(PreparedSubmit { job_id, job, nonce_val, final_nonce_str, submit_key })
 }
-
-#[cfg(test)]
-mod parse_smoke {
-    #[test]
-    fn module_linked() {}
-}

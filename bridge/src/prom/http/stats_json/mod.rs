@@ -9,11 +9,3 @@ mod parse;
 mod types;
 
 pub(crate) use aggregate::{get_stats_json, get_stats_json_all};
-
-#[cfg(test)]
-mod stats_json_mod_smoke {
-    #[test]
-    fn submodule_paths_resolve() {
-        let _ = core::mem::size_of::<super::types::StatsResponse>();
-    }
-}

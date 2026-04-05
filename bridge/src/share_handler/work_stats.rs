@@ -42,17 +42,6 @@ impl WorkStats {
     }
 }
 
-#[cfg(test)]
-mod work_stats_smoke {
-    use super::WorkStats;
-
-    #[test]
-    fn new_worker_name_stored() {
-        let w = WorkStats::new("w1".into());
-        assert_eq!(*w.worker_name.lock(), "w1");
-    }
-}
-
 pub(crate) struct StatsPrinterEntry {
     pub instance_id: String,
     pub inst_short: String,

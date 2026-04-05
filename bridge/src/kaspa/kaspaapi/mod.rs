@@ -8,11 +8,3 @@ mod node_status;
 
 pub use api::KaspaApi;
 pub use node_status::{NODE_STATUS, NodeStatusApi, NodeStatusSnapshot, network_display_from_id, node_status_for_api};
-
-#[cfg(test)]
-mod kaspaapi_mod_smoke {
-    #[test]
-    fn node_status_snapshot_sized() {
-        let _ = core::mem::size_of::<super::NodeStatusSnapshot>();
-    }
-}

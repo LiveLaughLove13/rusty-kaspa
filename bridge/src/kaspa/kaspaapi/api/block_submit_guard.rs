@@ -68,9 +68,3 @@ pub(super) fn try_mark_block_submit(hash: &str, now: Instant) -> bool {
 pub(super) fn remove_block_submit(hash: &str, now: Instant) {
     BLOCK_SUBMIT_GUARD.lock().remove(hash, now);
 }
-
-#[cfg(test)]
-mod block_submit_guard_smoke {
-    #[test]
-    fn module_linked() {}
-}

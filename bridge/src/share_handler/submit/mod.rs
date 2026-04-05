@@ -44,11 +44,3 @@ impl ShareHandler {
         Ok(())
     }
 }
-
-#[cfg(test)]
-mod submit_mod_smoke {
-    #[test]
-    fn submit_error_type_visible() {
-        let _ = core::mem::size_of::<super::SubmitError>();
-    }
-}

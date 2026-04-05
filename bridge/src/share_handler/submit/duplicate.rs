@@ -51,9 +51,3 @@ pub(super) async fn respond_on_duplicate(
 
     Ok(false)
 }
-
-#[cfg(test)]
-mod duplicate_smoke {
-    #[test]
-    fn module_linked() {}
-}

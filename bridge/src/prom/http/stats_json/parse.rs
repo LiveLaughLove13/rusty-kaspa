@@ -69,9 +69,3 @@ pub(super) fn new_worker_info(instance: String, worker: String, wallet: String) 
         session_uptime: None,
     }
 }
-
-#[cfg(test)]
-mod parse_smoke {
-    #[test]
-    fn module_linked() {}
-}

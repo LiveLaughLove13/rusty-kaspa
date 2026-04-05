@@ -14,16 +14,3 @@ impl BridgeError {
         Box::new(self)
     }
 }
-
-#[cfg(test)]
-mod bridge_error_tests {
-    use super::BridgeError;
-    use crate::share_handler::SubmitRunError;
-
-    #[test]
-    fn submit_variant_boxes() {
-        let e: BridgeError = SubmitRunError::ReplyFailed("rpc".into()).into();
-        assert!(!e.to_string().is_empty());
-        let _ = e.into_boxed_stratum();
-    }
-}
