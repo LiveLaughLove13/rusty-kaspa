@@ -1040,8 +1040,9 @@ fn test_parse_instance_spec_multiple_ports() {
 }
 
 // Integration tests for the bridge binary
-// These tests run with: cargo test -p kaspa-stratum-bridge --bin stratum-bridge
-// Or with CPU miner: cargo test -p kaspa-stratum-bridge --features rkstratum_cpu_miner --bin stratum-bridge
+// Run: cargo test -p kaspa-stratum-bridge --bin stratum-bridge
+// With CPU miner feature, InternalCpuMinerConfig is asserted inside the single in-process test
+// (only one embedded kaspad per process — global log logger).
 
 #[cfg(test)]
 mod integration {
@@ -1084,6 +1085,22 @@ mod integration {
         let (shutdown_tx, shutdown_rx) = watch::channel(false);
         let kaspa_api = KaspaApi::new(rpc_address.clone(), None, shutdown_rx.clone()).await.unwrap();
 
+        // With rkstratum_cpu_miner: exercise the type in the same run (only one in-process
+        // kaspad per process — log::set_logger is global; a second #[tokio::test] would panic).
+        #[cfg(feature = "rkstratum_cpu_miner")]
+        {
+            use kaspa_stratum_bridge::InternalCpuMinerConfig;
+            let miner_config = InternalCpuMinerConfig {
+                enabled: false,
+                mining_address: "kaspatest:test".to_string(),
+                threads: 1,
+                throttle: None,
+                template_poll_interval: Duration::from_millis(250),
+            };
+            assert!(!miner_config.enabled);
+            assert_eq!(miner_config.threads, 1);
+        }
+
         // Create bridge config
         let bridge_config = StratumBridgeConfig {
             instance_id: "test-instance".to_string(),
@@ -1116,91 +1133,6 @@ mod integration {
         // Wait for bridge to shutdown (with timeout)
         let result = timeout(Duration::from_secs(5), bridge_handle).await;
         assert!(result.is_ok(), "Bridge should shutdown gracefully");
-
-        // Cleanup
-        crate::inprocess_node::shutdown_inprocess(inprocess_node).await;
-        let _ = std::fs::remove_dir_all(&temp_dir);
-    }
-
-    #[tokio::test]
-    #[cfg(feature = "rkstratum_cpu_miner")]
-    // Note: When running both integration tests, use --test-threads=1 to avoid file descriptor limits
-    async fn test_bridge_startup_with_cpu_miner_feature() {
-        init_allocator_with_default_settings();
-
-        // Use a temporary directory for the node data
-        let temp_dir = std::env::temp_dir().join(format!("kaspad_test_{}", uuid::Uuid::new_v4()));
-        std::fs::create_dir_all(&temp_dir).unwrap();
-
-        // Start an in-process node with simnet/testnet settings
-        // Use a random port to avoid conflicts
-        let rpc_port = 16110 + (std::process::id() % 1000) as u16;
-        let rpc_address = format!("127.0.0.1:{}", rpc_port);
-        let argv: Vec<OsString> = vec![
-            "kaspad".into(),
-            "--testnet".into(),
-            "--appdir".into(),
-            temp_dir.to_string_lossy().to_string().into(),
-            format!("--rpclisten={}", rpc_address).into(),
-            "--utxoindex".into(),
-        ];
-
-        let node_args = kaspad_args::Args::parse(argv).unwrap();
-        let inprocess_node = crate::inprocess_node::InProcessNode::start_from_args(node_args).unwrap();
-
-        // Wait a bit for the node to start
-        tokio::time::sleep(Duration::from_millis(500)).await;
-
-        // Create KaspaApi client
-        let (shutdown_tx, shutdown_rx) = watch::channel(false);
-        let kaspa_api = KaspaApi::new(rpc_address.clone(), None, shutdown_rx.clone()).await.unwrap();
-
-        // Test that CPU miner module is available when feature is enabled
-        use kaspa_stratum_bridge::InternalCpuMinerConfig;
-        let miner_config = InternalCpuMinerConfig {
-            enabled: false, // Don't actually mine in test
-            mining_address: "kaspatest:test".to_string(),
-            threads: 1,
-            throttle: None,
-            template_poll_interval: Duration::from_millis(250),
-        };
-
-        // Verify the config can be created (this tests the feature is available)
-        assert!(!miner_config.enabled);
-        assert_eq!(miner_config.threads, 1);
-
-        // Create bridge config
-        let bridge_config = StratumBridgeConfig {
-            instance_id: "test-instance-cpu-miner".to_string(),
-            stratum_port: ":0".to_string(),
-            kaspad_address: rpc_address.clone(),
-            prom_port: String::new(),
-            print_stats: false,
-            log_to_file: false,
-            health_check_port: String::new(),
-            block_wait_time: Duration::from_secs(1),
-            min_share_diff: 1,
-            var_diff: false,
-            shares_per_min: 30,
-            var_diff_stats: false,
-            extranonce_size: 4,
-            pow2_clamp: false,
-            coinbase_tag_suffix: None,
-        };
-
-        // Start the bridge server
-        let bridge_handle =
-            tokio::spawn(async move { listen_and_serve_with_shutdown::<KaspaApi>(bridge_config, kaspa_api, None, shutdown_rx).await });
-
-        // Give it a moment to start
-        tokio::time::sleep(Duration::from_millis(200)).await;
-
-        // Signal shutdown
-        let _ = shutdown_tx.send(true);
-
-        // Wait for bridge to shutdown (with timeout)
-        let result = timeout(Duration::from_secs(5), bridge_handle).await;
-        assert!(result.is_ok(), "Bridge with CPU miner feature should shutdown gracefully");
 
         // Cleanup
         crate::inprocess_node::shutdown_inprocess(inprocess_node).await;

@@ -63,3 +63,20 @@ impl StratumListener {
         }
     }
 }
+
+#[cfg(test)]
+mod stratum_listener_mod_smoke {
+    #[test]
+    fn new_listener_constructs() {
+        use super::types::StratumListenerConfig;
+        use std::collections::HashMap;
+        use std::sync::Arc;
+        let cfg = StratumListenerConfig {
+            handler_map: Arc::new(HashMap::new()),
+            on_connect: Arc::new(|_| {}),
+            on_disconnect: Arc::new(|_| {}),
+            port: ":0".into(),
+        };
+        let _ = super::StratumListener::new(cfg);
+    }
+}

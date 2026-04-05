@@ -48,3 +48,11 @@ pub fn bind_addr_for_operator_http(port_or_addr: &str) -> String {
     }
     if s.starts_with(':') { format!("127.0.0.1{}", s) } else { s }
 }
+
+#[cfg(test)]
+mod net_utils_smoke {
+    #[test]
+    fn normalize_port_digits() {
+        assert_eq!(super::normalize_port("5555"), ":5555");
+    }
+}

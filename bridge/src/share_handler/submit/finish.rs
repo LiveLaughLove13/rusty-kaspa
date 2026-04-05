@@ -86,3 +86,9 @@ pub(super) async fn after_pow_loop(
         .map_err(|e| SubmitRunError::ReplyFailed(e.to_string()))?;
     Ok(())
 }
+
+#[cfg(test)]
+mod finish_smoke {
+    #[test]
+    fn module_linked() {}
+}

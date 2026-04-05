@@ -21,3 +21,12 @@ pub struct ContextSummary {
     pub worker_name: String,
     pub remote_app: String,
 }
+
+#[cfg(test)]
+mod stratum_context_types_smoke {
+    #[test]
+    fn client_identity_default_empty() {
+        let id = super::ClientIdentity::default();
+        assert!(id.wallet_addr.is_empty());
+    }
+}

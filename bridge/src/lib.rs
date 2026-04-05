@@ -109,3 +109,12 @@ pub use stratum_listener::{
 /// Per-instance stratum listener settings (distinct from `BridgeConfig` in `app_config`).
 pub use stratum_server::BridgeConfig as StratumServerBridgeConfig;
 pub use stratum_server::{listen_and_serve, listen_and_serve_with_shutdown, start_block_template_listener_with_api};
+
+#[cfg(test)]
+mod lib_smoke {
+    #[test]
+    fn public_types_resolve() {
+        let _ = core::mem::size_of::<crate::BridgeError>();
+        let _ = core::mem::size_of::<crate::ShareHandler>();
+    }
+}

@@ -30,3 +30,9 @@ impl InProcessNode {
 pub(crate) async fn shutdown_inprocess(node: InProcessNode) {
     let _ = tokio::task::spawn_blocking(move || node.shutdown()).await;
 }
+
+#[cfg(test)]
+mod inprocess_node_smoke {
+    #[test]
+    fn module_linked() {}
+}

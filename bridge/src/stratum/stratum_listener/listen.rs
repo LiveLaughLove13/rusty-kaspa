@@ -180,3 +180,9 @@ pub(crate) async fn listen_impl(
 
     Ok(())
 }
+
+#[cfg(test)]
+mod listen_smoke {
+    #[test]
+    fn module_linked() {}
+}

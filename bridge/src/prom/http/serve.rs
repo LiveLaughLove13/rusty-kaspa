@@ -261,3 +261,11 @@ pub async fn start_prom_server(port: &str, instance_id: &str) -> Result<(), Box<
     tracing::debug!("Hosting prom stats on {}/metrics", addr);
     serve_http_loop(listener, HttpMode::Instance { instance_id, web_bind: addr_str }).await
 }
+
+#[cfg(test)]
+mod serve_smoke {
+    #[test]
+    fn bind_addr_uses_operator_http_rules() {
+        assert_eq!(crate::net_utils::bind_addr_for_operator_http(":9"), "127.0.0.1:9");
+    }
+}

@@ -5,3 +5,9 @@
 mod read_loop;
 
 pub(crate) use read_loop::spawn_client_listener;
+
+#[cfg(test)]
+mod client_io_mod_smoke {
+    #[test]
+    fn module_linked() {}
+}

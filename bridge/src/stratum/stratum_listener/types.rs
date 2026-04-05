@@ -36,3 +36,12 @@ pub struct StratumListenerConfig {
     pub on_disconnect: Arc<dyn Fn(Arc<StratumContext>) + Send + Sync>,
     pub port: String,
 }
+
+#[cfg(test)]
+mod listener_types_smoke {
+    #[test]
+    fn stratum_stats_default_zero_disconnects() {
+        let s = super::StratumStats::default();
+        assert_eq!(s.disconnects, 0);
+    }
+}

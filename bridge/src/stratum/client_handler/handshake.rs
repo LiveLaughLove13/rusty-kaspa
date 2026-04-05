@@ -54,3 +54,9 @@ pub fn assign_extranonce_for_miner(ctx: &StratumContext, remote_app: &str) {
         if is_bitmain { "Bitmain" } else { "IceRiver/BzMiner/Goldshell" }
     );
 }
+
+#[cfg(test)]
+mod handshake_smoke {
+    #[test]
+    fn module_linked() {}
+}

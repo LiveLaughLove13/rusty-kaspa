@@ -263,3 +263,22 @@ pub fn spawn_internal_cpu_miner(
 
     Ok(metrics)
 }
+
+#[cfg(test)]
+mod rkstratum_cpu_miner_smoke {
+    use super::InternalCpuMinerConfig;
+    use std::time::Duration;
+
+    #[test]
+    fn disabled_config_roundtrip_fields() {
+        let c = InternalCpuMinerConfig {
+            enabled: false,
+            mining_address: "kaspatest:test".into(),
+            threads: 2,
+            throttle: None,
+            template_poll_interval: Duration::from_millis(100),
+        };
+        assert!(!c.enabled);
+        assert_eq!(c.threads, 2);
+    }
+}

@@ -24,3 +24,11 @@ pub(crate) fn get_bridge_logs_dir() -> PathBuf {
 pub(crate) fn default_inprocess_kaspad_appdir() -> PathBuf {
     get_bridge_app_dir().join("kaspad")
 }
+
+#[cfg(test)]
+mod app_dirs_smoke {
+    #[test]
+    fn logs_dir_name() {
+        assert!(super::get_bridge_logs_dir().ends_with("logs"));
+    }
+}

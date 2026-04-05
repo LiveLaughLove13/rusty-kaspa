@@ -581,3 +581,9 @@ pub(crate) async fn spawn_client_listener(ctx: Arc<StratumContext>, handler_map:
 
     ctx.disconnect();
 }
+
+#[cfg(test)]
+mod read_loop_smoke {
+    #[test]
+    fn module_linked() {}
+}

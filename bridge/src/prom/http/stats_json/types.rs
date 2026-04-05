@@ -79,3 +79,11 @@ pub(crate) struct WorkerInfo {
     #[serde(skip_serializing_if = "Option::is_none", rename = "sessionUptime")]
     pub(crate) session_uptime: Option<u64>, // Session uptime in seconds (time since last connection)
 }
+
+#[cfg(test)]
+mod types_smoke {
+    #[test]
+    fn stats_response_has_nonzero_size() {
+        assert!(core::mem::size_of::<super::StatsResponse>() > 0);
+    }
+}

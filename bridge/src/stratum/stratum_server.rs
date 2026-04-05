@@ -300,3 +300,11 @@ async fn listen_and_serve_impl<T: KaspaApiTrait + Send + Sync + 'static>(
 
     listen_result
 }
+
+#[cfg(test)]
+mod stratum_server_smoke {
+    #[test]
+    fn bridge_config_is_sized() {
+        let _ = core::mem::size_of::<super::BridgeConfig>();
+    }
+}

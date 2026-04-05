@@ -161,3 +161,12 @@ pub fn unmarshal_event(input: &str) -> Result<JsonRpcEvent, serde_json::Error> {
 pub fn unmarshal_response(input: &str) -> Result<JsonRpcResponse, serde_json::Error> {
     serde_json::from_str(input)
 }
+
+#[cfg(test)]
+mod jsonrpc_event_smoke {
+    #[test]
+    fn unmarshal_minimal_response() {
+        let r = super::unmarshal_response(r#"{"jsonrpc":"2.0","id":1,"result":true}"#).unwrap();
+        assert_eq!(r.id, Some(serde_json::json!(1)));
+    }
+}

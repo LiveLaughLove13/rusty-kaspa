@@ -115,3 +115,9 @@ pub fn diagnose_pow_issue(header: &Header, nonce: u64) {
     tracing::debug!("END DIAGNOSTIC");
     tracing::debug!("========================================\n");
 }
+
+#[cfg(test)]
+mod pow_diagnostic_smoke {
+    #[test]
+    fn module_linked() {}
+}

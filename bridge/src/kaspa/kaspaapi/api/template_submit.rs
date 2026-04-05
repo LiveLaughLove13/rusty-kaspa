@@ -355,3 +355,9 @@ impl KaspaApi {
         Ok(resp.blue)
     }
 }
+
+#[cfg(test)]
+mod template_submit_smoke {
+    #[test]
+    fn module_linked() {}
+}

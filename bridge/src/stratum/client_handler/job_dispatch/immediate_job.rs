@@ -303,3 +303,9 @@ pub(crate) async fn send_immediate_job_task<T: KaspaApiTrait + Send + Sync + ?Si
         debug!("[JOB] ===== JOB SENT SUCCESSFULLY TO {} =====", client_clone.remote_addr);
     }
 }
+
+#[cfg(test)]
+mod immediate_job_smoke {
+    #[test]
+    fn module_linked() {}
+}

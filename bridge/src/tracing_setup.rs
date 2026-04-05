@@ -384,3 +384,9 @@ pub(crate) fn init_tracing(
 
     file_guard
 }
+
+#[cfg(test)]
+mod tracing_setup_smoke {
+    #[test]
+    fn module_linked() {}
+}

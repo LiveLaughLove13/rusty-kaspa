@@ -46,3 +46,11 @@ pub(crate) fn try_read_static_file(url_path: &str) -> Option<(String, Vec<u8>)> 
     let bytes = std::fs::read(&file_path).ok()?;
     Some((rel, bytes))
 }
+
+#[cfg(test)]
+mod static_files_tests {
+    #[test]
+    fn content_type_css() {
+        assert!(super::content_type_for_path("app.css").contains("css"));
+    }
+}
