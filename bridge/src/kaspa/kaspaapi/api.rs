@@ -21,7 +21,7 @@ use tokio::sync::watch;
 use tokio::time::sleep;
 use tracing::{debug, error, info, warn};
 
-use super::block_submit_guard::BLOCK_SUBMIT_GUARD;
+use super::block_submit_guard::{remove_block_submit, try_mark_block_submit};
 use super::coinbase_tag::build_coinbase_tag_bytes;
 use super::node_status::NODE_STATUS;
 
@@ -331,8 +331,7 @@ impl KaspaApi {
 
         {
             let now = Instant::now();
-            let mut guard = BLOCK_SUBMIT_GUARD.lock();
-            if !guard.try_mark(&block_hash, now) {
+            if !try_mark_block_submit(&block_hash, now) {
                 return Err(anyhow::anyhow!("ErrDuplicateBlock: block already submitted"));
             }
         }
@@ -362,8 +361,7 @@ impl KaspaApi {
             let is_duplicate = error_str.contains("ErrDuplicateBlock") || error_str.contains("duplicate");
             if !is_duplicate {
                 let now = Instant::now();
-                let mut guard = BLOCK_SUBMIT_GUARD.lock();
-                guard.remove(&block_hash, now);
+                remove_block_submit(&block_hash, now);
             }
         }
 
@@ -373,8 +371,7 @@ impl KaspaApi {
                 // Only treat SubmitBlockReport::Success as accepted.
                 if !response.report.is_success() {
                     let now = Instant::now();
-                    let mut guard = BLOCK_SUBMIT_GUARD.lock();
-                    guard.remove(&block_hash, now);
+                    remove_block_submit(&block_hash, now);
 
                     warn!(
                         "{} {}",

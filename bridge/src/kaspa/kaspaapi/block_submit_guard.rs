@@ -3,7 +3,7 @@ use parking_lot::Mutex;
 use std::collections::{HashMap, VecDeque};
 use std::time::{Duration, Instant};
 
-pub(super) struct BlockSubmitGuard {
+struct BlockSubmitGuard {
     ttl: Duration,
     max_entries: usize,
     entries: HashMap<String, Instant>,
@@ -39,7 +39,7 @@ impl BlockSubmitGuard {
         }
     }
 
-    pub(super) fn try_mark(&mut self, hash: &str, now: Instant) -> bool {
+    fn try_mark(&mut self, hash: &str, now: Instant) -> bool {
         self.prune(now);
         if self.entries.contains_key(hash) {
             return false;
@@ -49,11 +49,20 @@ impl BlockSubmitGuard {
         true
     }
 
-    pub(super) fn remove(&mut self, hash: &str, now: Instant) {
+    fn remove(&mut self, hash: &str, now: Instant) {
         self.prune(now);
         self.entries.remove(hash);
     }
 }
 
-pub(super) static BLOCK_SUBMIT_GUARD: Lazy<Mutex<BlockSubmitGuard>> =
+static BLOCK_SUBMIT_GUARD: Lazy<Mutex<BlockSubmitGuard>> =
     Lazy::new(|| Mutex::new(BlockSubmitGuard::new(Duration::from_secs(600), 50_000)));
+
+/// Returns `false` if this hash was already marked recently (duplicate submit).
+pub(super) fn try_mark_block_submit(hash: &str, now: Instant) -> bool {
+    BLOCK_SUBMIT_GUARD.lock().try_mark(hash, now)
+}
+
+pub(super) fn remove_block_submit(hash: &str, now: Instant) {
+    BLOCK_SUBMIT_GUARD.lock().remove(hash, now);
+}
