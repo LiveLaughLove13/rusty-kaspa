@@ -6,6 +6,7 @@ use super::super::kaspa_api_trait::KaspaApiTrait;
 use super::error::{BlockSubmitRejection, SubmitRunError, classify_block_submit_error_message};
 use super::parse::PreparedSubmit;
 use super::pow_math;
+use super::pow_step::evaluate_job_pow;
 use crate::{
     log_colors::LogColors,
     mining_state::GetMiningState,
@@ -95,30 +96,20 @@ pub(super) async fn run_pow_validation_loop(
             format!("timestamp={}, nonce=0x{:x}, bits=0x{:08x}", header_clone.timestamp, header_clone.nonce, header_clone.bits)
         );
 
-        // Use kaspa_pow::State for PoW validation against the header's compact bits target.
-        use kaspa_pow::State as PowState;
-        let pow_state = PowState::new(&header_clone);
-        let (check_passed, pow_value_uint256) = pow_state.check_pow(nonce_val);
-
-        // Convert Uint256 to BigUint for comparison
-        pow_value = num_bigint::BigUint::from_bytes_be(&pow_value_uint256.to_be_bytes());
+        let snapshot = evaluate_job_pow(&header_clone, nonce_val);
+        pow_value = snapshot.pow_value;
+        let network_target = snapshot.network_target;
+        let meets_network_target = snapshot.meets_network_target;
+        // IMPORTANT: Use kaspa_pow's own compact-target handling as the source of truth.
+        // This avoids any potential mismatch in our BigUint conversion/comparison path.
+        pow_passed = snapshot.check_passed;
 
         debug!(
             "{} {} {}",
             LogColors::validation("[DEBUG]"),
             LogColors::label("PowState result:"),
-            format!("check_passed={}, pow_value={:x}", check_passed, pow_value)
+            format!("check_passed={}, pow_value={:x}", snapshot.check_passed, pow_value)
         );
-
-        // Calculate network target from header.bits (debug/diagnostic only).
-        use crate::hasher::calculate_target;
-        let network_target = calculate_target(header_clone.bits as u64);
-
-        // Check if pow_value meets network target (lower hash is better)
-        let meets_network_target = pow_math::meets_network_target_biguint(&pow_value, &network_target);
-        // IMPORTANT: Use kaspa_pow's own compact-target handling as the source of truth.
-        // This avoids any potential mismatch in our BigUint conversion/comparison path.
-        pow_passed = check_passed;
 
         let pow_value_bytes = pow_value.to_bytes_be();
         let network_target_bytes = network_target.to_bytes_be();
@@ -127,11 +118,11 @@ pub(super) async fn run_pow_validation_loop(
         debug!("[SUBMIT]   - pow_value: {:x} ({} bytes)", pow_value, pow_value_bytes.len());
         debug!("[SUBMIT]   - network_target: {:x} ({} bytes)", network_target, network_target_bytes.len());
         debug!("[SUBMIT]   - meets_network_target(BigUint): {}", meets_network_target);
-        debug!("[SUBMIT]   - check_passed(kaspa_pow): {}", check_passed);
+        debug!("[SUBMIT]   - check_passed(kaspa_pow): {}", pow_passed);
 
         debug!(
             "[SUBMIT] PoW check result: passed={}, pow_value={:x}, network_target={:x}, header.bits={}",
-            pow_passed, pow_value, network_target, header_clone.bits
+            pow_passed, pow_value, network_target, snapshot.header_bits
         );
 
         // Log detailed validation information with colors (moved to debug level)
@@ -158,7 +149,7 @@ pub(super) async fn run_pow_validation_loop(
             "{} {} {}",
             LogColors::validation("[VALIDATION]"),
             LogColors::label("PowState.check_pow() result:"),
-            format!("passed={}, Header bits: {}", pow_passed, header_clone.bits)
+            format!("passed={}, Header bits: {}", pow_passed, snapshot.header_bits)
         );
 
         // On devnet, network difficulty is very low, so we should see blocks being found
@@ -553,24 +544,23 @@ pub(super) async fn run_pow_validation_loop(
 
             // Job ID workaround for Bitmain/IceRiver ASICs - try previous jobs
             // Validate job ID: jobId == 1 || jobId%maxJobs == submitInfo.jobId%maxJobs+1
-            if pow_math::job_id_workaround_exhausted(current_job_id, prep.job_id, max_jobs) {
-                // Exhausted all previous blocks (wrapped around or reached job 1)
-                debug!("Job ID loop exhausted: current_job_id={}, job_id={}, max_jobs={}", current_job_id, prep.job_id, max_jobs);
-                break;
-            } else if let Some(prev_job_id) = pow_math::previous_job_id(current_job_id) {
-                if let Some(prev_job) = state.get_job(prev_job_id) {
-                    current_job_id = prev_job_id;
-                    current_job = prev_job;
-                    debug!("Trying previous job ID: {} (submitted as {})", current_job_id, prep.job_id);
-                    // Continue loop to validate with previous job
-                    continue;
-                } else {
-                    // Job doesn't exist, exit loop - bad share will be recorded
-                    debug!("Previous job ID {} doesn't exist, exiting loop", prev_job_id);
+            match pow_math::weak_share_job_advance(current_job_id, prep.job_id, max_jobs) {
+                pow_math::WeakShareJobAdvance::Exhausted => {
+                    debug!("Job ID loop exhausted: current_job_id={}, job_id={}, max_jobs={}", current_job_id, prep.job_id, max_jobs);
                     break;
                 }
-            } else {
-                break;
+                pow_math::WeakShareJobAdvance::NoPreviousJob => break,
+                pow_math::WeakShareJobAdvance::RetryPreviousJob { job_id: prev_job_id } => {
+                    if let Some(prev_job) = state.get_job(prev_job_id) {
+                        current_job_id = prev_job_id;
+                        current_job = prev_job;
+                        debug!("Trying previous job ID: {} (submitted as {})", current_job_id, prep.job_id);
+                        continue;
+                    } else {
+                        debug!("Previous job ID {} doesn't exist, exiting loop", prev_job_id);
+                        break;
+                    }
+                }
             }
         } else {
             // Valid share (pow_value < pool_target) - moved to debug to keep terminal clean

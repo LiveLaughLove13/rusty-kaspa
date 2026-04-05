@@ -4,11 +4,13 @@
 
 mod duplicate;
 mod error;
+pub use error::{SubmitError, SubmitRunError};
 mod finish;
 mod handle;
 mod parse;
 mod pow_loop;
 mod pow_math;
+mod pow_step;
 
 use super::ShareHandler;
 use super::kaspa_api_trait::KaspaApiTrait;
@@ -23,8 +25,8 @@ impl ShareHandler {
         ctx: Arc<StratumContext>,
         event: JsonRpcEvent,
         kaspa_api: Arc<dyn KaspaApiTrait + Send + Sync>,
-    ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
-        handle::handle_submit(self, ctx, event, kaspa_api).await.map_err(Into::into)
+    ) -> Result<(), SubmitRunError> {
+        handle::handle_submit(self, ctx, event, kaspa_api).await
     }
 
     #[allow(dead_code)]

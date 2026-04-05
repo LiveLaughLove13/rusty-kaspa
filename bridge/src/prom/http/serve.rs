@@ -1,4 +1,9 @@
 //! HTTP listener, request routing, and server entrypoints.
+//!
+//! **Threat model:** binds via [`crate::net_utils::bind_addr_for_operator_http`] (typically loopback).
+//! Meant for a trusted LAN or VPN, not a public multi-tenant API. `POST /api/config` is disabled unless
+//! [`config_write_allowed`] is true. JSON responses include `X-Content-Type-Options` and `Referrer-Policy`
+//! without changing bodies or `Access-Control-Allow-Origin` behavior used by dashboards.
 
 use super::super::metrics::{filter_metric_families_for_instance, init_metrics};
 use super::config_api::{config_write_allowed, get_config_json, get_web_status_config, update_config_from_json};
@@ -28,6 +33,20 @@ struct WebStatusResponse {
 pub(crate) enum HttpMode {
     Aggregated { web_bind: String },
     Instance { instance_id: String, web_bind: String },
+}
+
+fn json_ok_headers(content_len: usize) -> String {
+    format!(
+        "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nX-Content-Type-Options: nosniff\r\nReferrer-Policy: no-referrer\r\nAccess-Control-Allow-Origin: *\r\nContent-Length: {}\r\n\r\n",
+        content_len
+    )
+}
+
+fn json_forbidden_headers(content_len: usize) -> String {
+    format!(
+        "HTTP/1.1 403 Forbidden\r\nContent-Type: application/json\r\nX-Content-Type-Options: nosniff\r\nReferrer-Policy: no-referrer\r\nAccess-Control-Allow-Origin: *\r\nContent-Length: {}\r\n\r\n",
+        content_len
+    )
 }
 
 async fn write_response(
@@ -63,7 +82,7 @@ pub(crate) async fn handle_http_request(
         encoder.encode(&metric_families, &mut buf)?;
 
         let response = format!(
-            "HTTP/1.1 200 OK\r\nContent-Type: text/plain; version=0.0.4\r\nContent-Length: {}\r\n\r\n{}",
+            "HTTP/1.1 200 OK\r\nContent-Type: text/plain; version=0.0.4\r\nX-Content-Type-Options: nosniff\r\nContent-Length: {}\r\n\r\n{}",
             buf.len(),
             String::from_utf8_lossy(&buf)
         );
@@ -92,11 +111,7 @@ pub(crate) async fn handle_http_request(
             host,
         };
         let json = serde_json::to_string(&status).unwrap_or_else(|_| "{}".to_string());
-        let response = format!(
-            "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nAccess-Control-Allow-Origin: *\r\nContent-Length: {}\r\n\r\n{}",
-            json.len(),
-            json
-        );
+        let response = format!("{}{}", json_ok_headers(json.len()), json);
         stream.write_all(response.as_bytes()).await?;
         return Ok(());
     }
@@ -106,11 +121,7 @@ pub(crate) async fn handle_http_request(
             Some(h) => serde_json::to_string(&h).unwrap_or_else(|_| "{}".to_string()),
             None => r#"{"available":false,"message":"Host metrics disabled (minimal build: omit --no-default-features or add --features rkstratum_host_metrics) or not yet collected"}"#.to_string(),
         };
-        let response = format!(
-            "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nAccess-Control-Allow-Origin: *\r\nContent-Length: {}\r\n\r\n{}",
-            body.len(),
-            body
-        );
+        let response = format!("{}{}", json_ok_headers(body.len()), body);
         stream.write_all(response.as_bytes()).await?;
         return Ok(());
     }
@@ -121,22 +132,14 @@ pub(crate) async fn handle_http_request(
             HttpMode::Instance { instance_id, .. } => get_stats_json(instance_id).await,
         };
         let json = serde_json::to_string(&stats).unwrap_or_else(|_| "{}".to_string());
-        let response = format!(
-            "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nAccess-Control-Allow-Origin: *\r\nContent-Length: {}\r\n\r\n{}",
-            json.len(),
-            json
-        );
+        let response = format!("{}{}", json_ok_headers(json.len()), json);
         stream.write_all(response.as_bytes()).await?;
         return Ok(());
     }
 
     if matches!(mode, HttpMode::Instance { .. }) && request.starts_with("GET /api/config") {
         let config_json = get_config_json().await;
-        let response = format!(
-            "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nAccess-Control-Allow-Origin: *\r\nContent-Length: {}\r\n\r\n{}",
-            config_json.len(),
-            config_json
-        );
+        let response = format!("{}{}", json_ok_headers(config_json.len()), config_json);
         stream.write_all(response.as_bytes()).await?;
         return Ok(());
     }
@@ -145,11 +148,7 @@ pub(crate) async fn handle_http_request(
         if !config_write_allowed() {
             let json_response =
                 r#"{"success": false, "message": "Config write disabled. Set RKSTRATUM_ALLOW_CONFIG_WRITE=1 to enable."}"#;
-            let response = format!(
-                "HTTP/1.1 403 Forbidden\r\nContent-Type: application/json\r\nAccess-Control-Allow-Origin: *\r\nContent-Length: {}\r\n\r\n{}",
-                json_response.len(),
-                json_response
-            );
+            let response = format!("{}{}", json_forbidden_headers(json_response.len()), json_response);
             stream.write_all(response.as_bytes()).await?;
             return Ok(());
         }
@@ -162,11 +161,7 @@ pub(crate) async fn handle_http_request(
         } else {
             r#"{"success": false, "message": "Failed to update config"}"#
         };
-        let response = format!(
-            "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nAccess-Control-Allow-Origin: *\r\nContent-Length: {}\r\n\r\n{}",
-            json_response.len(),
-            json_response
-        );
+        let response = format!("{}{}", json_ok_headers(json_response.len()), json_response);
         stream.write_all(response.as_bytes()).await?;
         return Ok(());
     }

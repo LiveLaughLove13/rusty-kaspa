@@ -6,6 +6,7 @@ mod vardiff;
 mod work_stats;
 
 pub use kaspa_api_trait::KaspaApiTrait;
+pub use submit::{SubmitError, SubmitRunError};
 #[cfg(feature = "rkstratum_cpu_miner")]
 pub use work_stats::{RKSTRATUM_CPU_MINER_METRICS, set_rkstratum_cpu_miner_metrics};
 pub use work_stats::{STATS_PRINTER_STARTED, WorkStats};

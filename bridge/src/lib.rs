@@ -27,6 +27,7 @@ mod stratum {
     pub mod client_handler;
     pub mod default_client;
     pub mod stratum_context;
+    pub(crate) mod stratum_handler_error;
     pub mod stratum_line_codec;
     pub mod stratum_listener;
     pub mod stratum_server;
@@ -95,7 +96,7 @@ pub use prom::{
 };
 #[cfg(feature = "rkstratum_cpu_miner")]
 pub use rkstratum_cpu_miner::{InternalCpuMinerConfig, InternalMinerMetrics, spawn_internal_cpu_miner};
-pub use share_handler::{KaspaApiTrait, STATS_PRINTER_STARTED, ShareHandler, WorkStats};
+pub use share_handler::{KaspaApiTrait, STATS_PRINTER_STARTED, ShareHandler, SubmitError, SubmitRunError, WorkStats};
 #[cfg(feature = "rkstratum_cpu_miner")]
 pub use share_handler::{RKSTRATUM_CPU_MINER_METRICS, set_rkstratum_cpu_miner_metrics};
 pub use stratum_context::{ClientIdentity, ContextSummary, ErrorDisconnected, StratumContext};

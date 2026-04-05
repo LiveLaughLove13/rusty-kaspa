@@ -41,6 +41,29 @@ pub(crate) fn pool_target_or_zero(pool_target: Option<BigUint>) -> BigUint {
     pool_target.unwrap_or_else(BigUint::zero)
 }
 
+/// Next action when a share is too weak for the pool and the job-ID workaround may apply.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) enum WeakShareJobAdvance {
+    /// Workaround exhausted (same condition as `job_id_workaround_exhausted`); `pow_loop` logs before stopping.
+    Exhausted,
+    /// No `current_job_id - 1` to try (`current_job_id <= 1`); stop without the “exhausted” log.
+    NoPreviousJob,
+    /// Try validation against this job id if it exists in mining state.
+    RetryPreviousJob { job_id: u64 },
+}
+
+/// Pure decision for the weak-share branch in `pow_loop` (caller loads `RetryPreviousJob` from state).
+#[inline]
+pub(crate) fn weak_share_job_advance(current_job_id: u64, submitted_job_id: u64, max_jobs: u64) -> WeakShareJobAdvance {
+    if job_id_workaround_exhausted(current_job_id, submitted_job_id, max_jobs) {
+        WeakShareJobAdvance::Exhausted
+    } else if let Some(job_id) = previous_job_id(current_job_id) {
+        WeakShareJobAdvance::RetryPreviousJob { job_id }
+    } else {
+        WeakShareJobAdvance::NoPreviousJob
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -82,5 +105,24 @@ mod tests {
     #[test]
     fn zero_max_jobs_exhausted() {
         assert!(job_id_workaround_exhausted(5, 5, 0));
+    }
+
+    #[test]
+    fn weak_share_advance_exhausted() {
+        let max = 300u64;
+        assert_eq!(weak_share_job_advance(1, 10, max), WeakShareJobAdvance::Exhausted);
+        assert_eq!(weak_share_job_advance(6, 5, max), WeakShareJobAdvance::Exhausted);
+    }
+
+    #[test]
+    fn weak_share_advance_no_previous_when_id_zero() {
+        assert_eq!(weak_share_job_advance(0, 5, 300), WeakShareJobAdvance::NoPreviousJob);
+    }
+
+    #[test]
+    fn weak_share_advance_retry_when_not_exhausted() {
+        let max = 300u64;
+        assert_eq!(weak_share_job_advance(5, 5, max), WeakShareJobAdvance::RetryPreviousJob { job_id: 4 });
+        assert_eq!(weak_share_job_advance(10, 5, max), WeakShareJobAdvance::RetryPreviousJob { job_id: 9 });
     }
 }
