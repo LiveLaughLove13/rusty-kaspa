@@ -1325,7 +1325,7 @@ mod comprehensive_tests {
         assert!(result.is_ok(), "Subscribe should succeed");
 
         // Verify miner type was detected
-        let remote_app = ctx.remote_app.lock().clone();
+        let remote_app = ctx.identity.lock().remote_app.clone();
         assert_eq!(remote_app, "BzMiner", "Miner type should be detected from params");
 
         // Verify extranonce was assigned (empty for default handler)
@@ -1390,7 +1390,7 @@ mod comprehensive_tests {
         let client_handler = Arc::new(ClientHandler::new(share_handler, 8192.0, 2, "test-instance".to_string()));
 
         let ctx = create_test_context_sync();
-        *ctx.remote_app.lock() = "IceRiver KS2L".to_string();
+        ctx.identity.lock().remote_app = "IceRiver KS2L".to_string();
         client_handler.assign_extranonce_for_miner(&ctx, "IceRiver KS2L");
 
         let extranonce = ctx.extranonce.lock().clone();
@@ -1404,7 +1404,7 @@ mod comprehensive_tests {
         let client_handler = Arc::new(ClientHandler::new(share_handler, 8192.0, 0, "test-instance".to_string()));
 
         let ctx = create_test_context_sync();
-        *ctx.remote_app.lock() = "GodMiner".to_string();
+        ctx.identity.lock().remote_app = "GodMiner".to_string();
         client_handler.assign_extranonce_for_miner(&ctx, "GodMiner");
 
         let extranonce = ctx.extranonce.lock().clone();
@@ -1418,7 +1418,7 @@ mod comprehensive_tests {
         let client_handler = Arc::new(ClientHandler::new(share_handler, 8192.0, 2, "test-instance".to_string()));
 
         let ctx = create_test_context_sync();
-        *ctx.remote_app.lock() = "BzMiner".to_string();
+        ctx.identity.lock().remote_app = "BzMiner".to_string();
         client_handler.assign_extranonce_for_miner(&ctx, "BzMiner");
 
         let extranonce = ctx.extranonce.lock().clone();
@@ -1732,8 +1732,8 @@ mod comprehensive_tests {
         // Test: Worker statistics creation and tracking
         let handler = ShareHandler::new("test-instance".to_string());
         let ctx = create_test_context_sync();
-        *ctx.worker_name.lock() = "worker1".to_string();
-        *ctx.wallet_addr.lock() = "kaspatest:test".to_string();
+        ctx.identity.lock().worker_name = "worker1".to_string();
+        ctx.identity.lock().wallet_addr = "kaspatest:test".to_string();
 
         let stats = handler.get_create_stats(&ctx);
         assert_eq!(*stats.worker_name.lock(), "worker1");
@@ -1854,7 +1854,7 @@ mod comprehensive_tests {
         assert!(!extranonce.is_empty(), "Extranonce should be assigned");
 
         // 4. Verify miner type was detected
-        let remote_app = ctx.remote_app.lock().clone();
+        let remote_app = ctx.identity.lock().remote_app.clone();
         assert_eq!(remote_app, "IceRiver KS2L");
 
         // 5. Initialize mining state
@@ -2868,9 +2868,10 @@ mod comprehensive_tests {
         let ctx = create_test_context_sync();
 
         // Set wallet and worker
-        *ctx.wallet_addr.lock() = "kaspatest:qr8example123456789012345678901234567890123456789012345678901234567890".to_string();
-        *ctx.worker_name.lock() = "worker1".to_string();
-        *ctx.remote_app.lock() = "BzMiner".to_string();
+        ctx.identity.lock().wallet_addr =
+            "kaspatest:qr8example123456789012345678901234567890123456789012345678901234567890".to_string();
+        ctx.identity.lock().worker_name = "worker1".to_string();
+        ctx.identity.lock().remote_app = "BzMiner".to_string();
 
         let summary = ctx.summary();
         assert_eq!(summary.remote_addr, "127.0.0.1", "Summary should contain remote address");

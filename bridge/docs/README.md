@@ -299,3 +299,7 @@ The test suite includes:
 - CPU miner tests (when `rkstratum_cpu_miner` feature is enabled)
 
 The test suite is comprehensive and educational, with 175+ unit tests designed to help developers understand the codebase.
+
+### Where to change what
+
+For a plain-language guide to what each part of the bridge code does, see [CONTRIBUTOR_MAP.md](CONTRIBUTOR_MAP.md).

@@ -75,3 +75,34 @@ pub(crate) fn vardiff_compute_next_diff(
     }
     if (next - current).abs() > f64::EPSILON { Some(next) } else { None }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn no_shares_long_wait_lowers_diff() {
+        let next = vardiff_compute_next_diff(100.0, 0.0, 95.0, 10.0, false).expect("should adjust");
+        assert!(next < 100.0);
+        assert!(next >= 1.0);
+    }
+
+    #[test]
+    fn no_change_when_ratio_in_band() {
+        assert!(vardiff_compute_next_diff(64.0, 5.0, 60.0, 5.0, false).is_none());
+    }
+
+    #[test]
+    fn pow2_clamp_rounds_to_power_of_two() {
+        let next = vardiff_compute_next_diff(8.0, 0.0, 95.0, 10.0, true).expect("adjust");
+        assert!(next.is_finite() && next >= 1.0);
+        let log2 = next.log2();
+        assert!((log2 - log2.round()).abs() < 1e-9, "expected power of 2, got {}", next);
+    }
+
+    #[test]
+    fn invalid_current_returns_none() {
+        assert!(vardiff_compute_next_diff(0.0, 1.0, 60.0, 5.0, false).is_none());
+        assert!(vardiff_compute_next_diff(f64::NAN, 1.0, 60.0, 5.0, false).is_none());
+    }
+}

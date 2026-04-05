@@ -7,7 +7,7 @@ use std::sync::Arc;
 use tokio::io::AsyncReadExt;
 use tracing::{debug, error, info, warn};
 
-use super::types::EventHandler;
+use super::super::types::EventHandler;
 
 pub(crate) async fn spawn_client_listener(ctx: Arc<StratumContext>, handler_map: &Arc<HashMap<String, EventHandler>>) {
     debug!("[CLIENT_LISTENER] Starting client listener for {}:{}", ctx.remote_addr, ctx.remote_port);
@@ -50,8 +50,10 @@ pub(crate) async fn spawn_client_listener(ctx: Arc<StratumContext>, handler_map:
         match read_result {
             Ok(Ok(0)) => {
                 // EOF - client closed connection
-                let worker_name = ctx.worker_name.lock().clone();
-                let remote_app = ctx.remote_app.lock().clone();
+                let (worker_name, remote_app) = {
+                    let id = ctx.identity.lock();
+                    (id.worker_name.clone(), id.remote_app.clone())
+                };
                 let pending_buffer_bytes = line_buffer.len();
                 let is_pre_handshake = worker_name.is_empty() && remote_app.is_empty();
                 if is_pre_handshake && first_message && pending_buffer_bytes == 0 {
@@ -74,9 +76,10 @@ pub(crate) async fn spawn_client_listener(ctx: Arc<StratumContext>, handler_map:
                 let data: Vec<u8> = strip_nul_bytes(&buffer[..n]);
 
                 if first_message {
-                    let wallet_addr = ctx.wallet_addr.lock().clone();
-                    let worker_name = ctx.worker_name.lock().clone();
-                    let remote_app = ctx.remote_app.lock().clone();
+                    let (wallet_addr, worker_name, remote_app) = {
+                        let id = ctx.identity.lock();
+                        (id.wallet_addr.clone(), id.worker_name.clone(), id.remote_app.clone())
+                    };
                     let message_str = String::from_utf8_lossy(&data);
 
                     // Check for HTTP/2/gRPC protocol in first message (before logging)
@@ -214,9 +217,10 @@ pub(crate) async fn spawn_client_listener(ctx: Arc<StratumContext>, handler_map:
 
                 for line in drained {
                     // Get client context for detailed logging
-                    let wallet_addr = ctx.wallet_addr.lock().clone();
-                    let worker_name = ctx.worker_name.lock().clone();
-                    let remote_app = ctx.remote_app.lock().clone();
+                    let (wallet_addr, worker_name, remote_app) = {
+                        let id = ctx.identity.lock();
+                        (id.wallet_addr.clone(), id.worker_name.clone(), id.remote_app.clone())
+                    };
 
                     // Detect HTTP/2/gRPC connections early and reject them
                     if line_looks_like_http(&line) {
@@ -537,8 +541,10 @@ pub(crate) async fn spawn_client_listener(ctx: Arc<StratumContext>, handler_map:
                     || e.kind() == std::io::ErrorKind::ConnectionReset
                     || e.kind() == std::io::ErrorKind::BrokenPipe
                 {
-                    let worker_name = ctx.worker_name.lock().clone();
-                    let remote_app = ctx.remote_app.lock().clone();
+                    let (worker_name, remote_app) = {
+                        let id = ctx.identity.lock();
+                        (id.worker_name.clone(), id.remote_app.clone())
+                    };
                     let is_pre_handshake = worker_name.is_empty() && remote_app.is_empty();
                     if is_pre_handshake {
                         debug!(

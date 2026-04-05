@@ -431,6 +431,22 @@ mod tests {
     use super::*;
 
     #[test]
+    fn diff_to_target_higher_diff_means_smaller_target() {
+        let t1 = diff_to_target(1.0);
+        let t_high = diff_to_target(256.0);
+        assert!(t_high < t1, "larger stratum difficulty should yield smaller target");
+    }
+
+    #[test]
+    fn diff_to_target_non_positive_uses_max_target() {
+        let t0 = diff_to_target(0.0);
+        let t_neg = diff_to_target(-1.0);
+        assert_eq!(t0, t_neg);
+        let t_one = diff_to_target(1.0);
+        assert!(t0 > t_one);
+    }
+
+    #[test]
     #[ignore] // Diagnostic test - values may vary based on implementation
     fn test_diff_to_target() {
         use num_traits::Num;

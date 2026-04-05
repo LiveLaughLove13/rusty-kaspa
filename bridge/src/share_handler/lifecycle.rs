@@ -34,8 +34,8 @@ impl ShareHandler {
         let mut stats_map = self.stats.lock();
 
         let worker_id = {
-            let worker_name = ctx.worker_name.lock();
-            if !worker_name.is_empty() { worker_name.clone() } else { ctx.remote_addr().to_string() }
+            let id = ctx.identity.lock();
+            if !id.worker_name.is_empty() { id.worker_name.clone() } else { ctx.remote_addr().to_string() }
         };
 
         if let Some(stats) = stats_map.get(&worker_id) {
@@ -53,7 +53,7 @@ impl ShareHandler {
         drop(stats_map);
 
         // Initialize worker counters
-        let wallet_addr = ctx.wallet_addr.lock().clone();
+        let wallet_addr = ctx.identity.lock().wallet_addr.clone();
         let worker_name = stats.worker_name.lock().clone();
         init_worker_counters(&crate::prom::WorkerContext {
             instance_id: self.instance_id.clone(),

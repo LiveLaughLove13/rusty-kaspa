@@ -88,13 +88,13 @@ pub async fn handle_subscribe(
 
     // Extract remote app from params if present
     if let Some(Value::String(app)) = event.params.first() {
-        *ctx.remote_app.lock() = app.clone();
+        ctx.identity.lock().remote_app = app.clone();
         tracing::debug!("[SUBSCRIBE] Extracted app from params[0]: '{}'", app);
     } else {
         tracing::warn!("[SUBSCRIBE] No app string in params[0], params: {:?}", event.params);
     }
 
-    let remote_app = ctx.remote_app.lock().clone();
+    let remote_app = ctx.identity.lock().remote_app.clone();
 
     tracing::info!("[HANDSHAKE] subscribe parsed app='{}' from {}:{}", remote_app, ctx.remote_addr, ctx.remote_port);
 
@@ -223,14 +223,17 @@ pub async fn handle_authorize(
 
     tracing::debug!("[AUTHORIZE] Final parsed - address: '{}', worker: '{}', canxium: '{}'", address, worker_name, canxium_address);
 
-    *ctx.wallet_addr.lock() = address.clone();
-    *ctx.worker_name.lock() = worker_name.clone();
+    {
+        let mut id = ctx.identity.lock();
+        id.wallet_addr = address.clone();
+        id.worker_name = worker_name.clone();
+    }
 
-    let remote_app = ctx.remote_app.lock().clone();
+    let remote_app = ctx.identity.lock().remote_app.clone();
     tracing::info!("[HANDSHAKE] authorized {}:{} worker='{}' app='{}'", ctx.remote_addr, ctx.remote_port, worker_name, remote_app);
 
     if !canxium_address.is_empty() {
-        *ctx.canxium_addr.lock() = canxium_address.clone();
+        ctx.identity.lock().canxium_addr = canxium_address.clone();
     }
 
     let response = JsonRpcResponse::new(&event, Some(Value::Bool(true)), None);
@@ -257,7 +260,7 @@ pub async fn handle_authorize(
         tracing::debug!("[AUTHORIZE] No extranonce configured (extranonce_size=0), skipping extranonce step");
     }
 
-    let wallet_addr = ctx.wallet_addr.lock().clone();
+    let wallet_addr = ctx.identity.lock().wallet_addr.clone();
     let mut log_message = format!("[AUTHORIZE] Client authorized - address: {}", wallet_addr);
     if !canxium_address.is_empty() {
         log_message.push_str(&format!(", canxium address: {}", canxium_address));
@@ -340,7 +343,7 @@ fn clean_wallet(input: &str) -> Result<String, Box<dyn std::error::Error + Send 
 async fn send_extranonce(ctx: Arc<StratumContext>) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     tracing::debug!("[EXTRANONCE] ===== SENDING EXTRANONCE TO {} =====", ctx.remote_addr);
 
-    let remote_app = ctx.remote_app.lock().clone();
+    let remote_app = ctx.identity.lock().remote_app.clone();
     let extranonce = ctx.extranonce.lock().clone();
 
     tracing::debug!("[EXTRANONCE] Remote app: '{}', Extranonce: '{}'", remote_app, extranonce);

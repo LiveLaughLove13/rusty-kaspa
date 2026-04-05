@@ -1,6 +1,6 @@
 //! Stratum TCP listener: accept loop, per-client read/framing, JSON-RPC dispatch.
 //!
-//! Internal modules: `types` (config + handler types), `listen` (bind/accept), `client_io` (per-client I/O).
+//! Internal modules: `types` (config + handler types), `listen` (bind/accept), `client_io/` (per-client read loop).
 
 mod client_io;
 mod listen;

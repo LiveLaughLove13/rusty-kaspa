@@ -1,6 +1,6 @@
 //! Kaspa gRPC client (`KaspaApi`), node status snapshot for dashboards, and coinbase tag helpers.
 //!
-//! Split across `coinbase_tag`, `node_status`, and `api` (block submit dedupe lives inside `api`).
+//! Split across `coinbase_tag`, `node_status`, and `api` (`block_submit_guard`, `streams`, `template_submit`).
 
 mod api;
 mod coinbase_tag;
