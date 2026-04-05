@@ -11,6 +11,7 @@ This document maps the Stratum bridge deliverables:
 | File | What this file does |
 |------|----------------------|
 | `lib.rs` | Declares library modules, documents the crate layout, and re-exports the public API used by the binary and tests. |
+| `bridge_error.rs` | `BridgeError`: typed error for the Stratum listener boundary (wraps `SubmitRunError` today); converted to `Box<dyn Error + Send + Sync>` so `EventHandler` stays object-safe. |
 | `main.rs` | `stratum-bridge` entrypoint: loads config, CLI overrides, tracing, health checks, optional in-process node and CPU miner, Prometheus/HTTP, and Stratum listener shutdown. |
 | `cli.rs` | Command-line argument definitions and applying CLI overrides onto loaded configuration. |
 | `app_dirs.rs` | Resolves application data directories (e.g. config and chain data locations) for the running process. |
@@ -43,7 +44,7 @@ This document maps the Stratum bridge deliverables:
 
 | File | What this file does |
 |------|----------------------|
-| `stratum/stratum_server.rs` | Wires the Stratum listener to handler maps, APIs, and block-template notifications; main orchestration for accepting miners and serving RPC. |
+| `stratum/stratum_server.rs` | Wires the Stratum listener to handler maps, APIs, and block-template notifications; main orchestration for accepting miners and serving RPC; maps `mining.submit` failures through `BridgeError` when boxing for the handler map. |
 | `stratum/default_client.rs` | Default handler registration and logging glue so a standard deployment connects the listener to the built-in Stratum method implementations. |
 | `stratum/stratum_line_codec.rs` | Framing helpers: strip NULs, detect accidental HTTP on the Stratum port, and buffer or split incoming bytes into lines for JSON-RPC. |
 | `stratum/stratum_listener/mod.rs` | `StratumListener` type: owns listener config and stats, starts the TCP accept loop, and exposes listen/stop with optional shutdown coordination. |
@@ -86,12 +87,15 @@ This document maps the Stratum bridge deliverables:
 
 | File | What this file does |
 |------|----------------------|
-| `share_handler/submit/mod.rs` | Submit submodule declarations and `ShareHandler::handle_submit` forwarding to the internal handle with boxed error conversion at the public boundary. |
-| `share_handler/submit/error.rs` | `SubmitError` and `SubmitRunError`: structured errors for parse/validation, Stratum disconnect, and JSON-RPC reply failures inside the submit path. |
+| `share_handler/submit/mod.rs` | Submit submodule declarations and `ShareHandler::handle_submit` returning `Result<(), SubmitRunError>`. |
+| `share_handler/submit/error.rs` | `SubmitError` and `SubmitRunError`: structured errors for parse/validation, Stratum disconnect, and JSON-RPC reply failures; `BlockSubmitRejection` / `classify_block_submit_error_message` for node RPC text. |
 | `share_handler/submit/handle.rs` | Orchestrates parse → duplicate check → PoW loop → finish for one `mining.submit`. |
 | `share_handler/submit/parse.rs` | Validates `mining.submit` parameters, resolves the job, merges extranonce into the nonce hex string, parses nonce to `u64`, and builds the duplicate key. |
 | `share_handler/submit/duplicate.rs` | If the submit key is duplicate or in-flight, sends the appropriate JSON-RPC response and returns early without running PoW. |
-| `share_handler/submit/pow_loop.rs` | PoW validation loop across job ids when needed, pool vs network target checks, block submission to the node, stale/bad block handling, and weak-share detection. |
+| `share_handler/submit/pow_math.rs` | Pure helpers: pool vs network target comparisons, job-ID workaround (`weak_share_job_advance`, `job_id_workaround_exhausted`, `previous_job_id`); unit tests. |
+| `share_handler/submit/pow_step.rs` | `evaluate_job_pow`: single-job PoW snapshot from a template header and nonce (`kaspa_pow` + `calculate_target`); unit tests. |
+| `share_handler/submit/pow_loop.rs` | PoW validation loop across job ids when needed, pool difficulty checks, weak-share / job-ID workaround; delegates network-block-found path to `block_submit`. |
+| `share_handler/submit/block_submit.rs` | When PoW meets network target: logging, block build, `submit_block`, blue-confirm background task, node reject / duplicate-stale / bad-share Stratum replies and stats; unit tests for submit report / classification. |
 | `share_handler/submit/finish.rs` | After PoW: records valid or low-diff shares, updates duplicate outcomes, updates Prometheus counters, and sends the final success reply when applicable. |
 
 ## Kaspa node integration
@@ -112,8 +116,9 @@ This document maps the Stratum bridge deliverables:
 |------|----------------------|
 | `prom/mod.rs` | Prometheus registry setup, metric handles, and recording functions for workers, shares, blocks, and disconnects. |
 | `prom/metrics.rs` | Metric registration, worker counter initialization, and bridge-wide gauge/counter definitions used across the crate. |
-| `prom/http/mod.rs` | HTTP submodule root: wires static files, stats JSON, config API, and serve; re-exports server start helpers; contains HTTP routing tests. |
-| `prom/http/serve.rs` | Binds HTTP for metrics and dashboard, routes requests (`/metrics`, `/api/*`, static assets), and implements the shared request handler. |
+| `prom/http/mod.rs` | HTTP submodule root: wires static files, stats JSON, config API, ops access, and serve; re-exports server start helpers; contains HTTP routing tests. |
+| `prom/http/ops_access.rs` | Optional `/api/config` hardening (env-gated): bearer token, `X-Rkstratum-Csrf`, localhost-only, POST rate limit; see module docs for variable names. |
+| `prom/http/serve.rs` | Binds HTTP for metrics and dashboard, routes requests (`/metrics`, `/api/*`, static assets), passes client `SocketAddr` into the handler for ops checks, and applies baseline JSON security headers. |
 | `prom/http/static_files.rs` | Serves dashboard static files for the operator UI from embedded assets and/or the on-disk `bridge/static/` tree (see **Web dashboard static assets** below). |
 | `prom/http/config_api.rs` | Read/write bridge configuration over HTTP where enabled, and status paths used by the dashboard. |
 | `prom/http/stats_json/mod.rs` | Stats JSON submodule: declares types, parse, and aggregate modules and re-exports stats builders. |
