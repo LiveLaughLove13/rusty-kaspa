@@ -140,7 +140,8 @@ jobs:
             cd "$GITHUB_WORKSPACE"
             # Host WebKit symlinks live under /usr/local/lib; subshell cleared RUSTFLAGS so restore link search.
             export RUSTFLAGS="-L/usr/local/lib"
-            cargo build --bin rkstratum-bridge-desktop --release
+            # Match local desktop release: internal CPU miner UI + CLI flags (bridge/rkstratum_cpu_miner).
+            cargo build -p rkstratum-bridge-desktop --release --features rkstratum_cpu_miner
             cp target/release/rkstratum-bridge-desktop bin/
           )
           archive="bin/rusty-kaspa-${{ github.event.release.tag_name }}-linux-amd64.zip"
@@ -175,7 +176,7 @@ jobs:
           cargo build --bin rothschild --release
           cargo build --bin kaspa-wallet --release
           cargo build --bin stratum-bridge --release
-          cargo build --bin rkstratum-bridge-desktop --release
+          cargo build -p rkstratum-bridge-desktop --release --features rkstratum_cpu_miner
           mkdir bin || true
           cp target/release/kaspad.exe bin/
           cp target/release/rothschild.exe bin/
@@ -197,7 +198,7 @@ jobs:
           cargo build --bin rothschild --release
           cargo build --bin kaspa-wallet --release
           cargo build --bin stratum-bridge --release
-          cargo build --bin rkstratum-bridge-desktop --release
+          cargo build -p rkstratum-bridge-desktop --release --features rkstratum_cpu_miner
           mkdir bin || true
           cp target/release/kaspad bin/
           cp target/release/rothschild bin/
