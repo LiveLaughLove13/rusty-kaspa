@@ -23,14 +23,21 @@ jobs:
         run: |
           set -e
           sudo apt-get update
-          if ! apt-cache show libwebkit2gtk-4.0-dev &>/dev/null || ! apt-cache show libjavascriptcoregtk-4.0-dev &>/dev/null; then
-            echo "::error::Tauri 1.x dependencies (libwebkit2gtk-4.0-dev + libjavascriptcoregtk-4.0-dev) are unavailable on this ubuntu-latest image."
-            echo "::error::Use ubuntu-22.04 for these jobs or upgrade the Tauri/WebKit stack to 4.1-compatible crates."
+          if apt-cache show libwebkit2gtk-4.0-dev &>/dev/null && apt-cache show libjavascriptcoregtk-4.0-dev &>/dev/null; then
+            WEBKIT_PKG=libwebkit2gtk-4.0-dev
+            JSCORE_PKG=libjavascriptcoregtk-4.0-dev
+            NEED_PC_ALIAS=0
+          elif apt-cache show libwebkit2gtk-4.1-dev &>/dev/null && apt-cache show libjavascriptcoregtk-4.1-dev &>/dev/null; then
+            WEBKIT_PKG=libwebkit2gtk-4.1-dev
+            JSCORE_PKG=libjavascriptcoregtk-4.1-dev
+            NEED_PC_ALIAS=1
+          else
+            echo "::error::No compatible WebKit/JSC dev package pair found in apt cache."
             exit 1
           fi
           sudo apt-get install -y \
-            libwebkit2gtk-4.0-dev \
-            libjavascriptcoregtk-4.0-dev \
+            "$WEBKIT_PKG" \
+            "$JSCORE_PKG" \
             build-essential \
             curl \
             wget \
@@ -41,6 +48,14 @@ jobs:
             libayatana-appindicator3-dev \
             librsvg2-dev \
             patchelf
+          if [ "$NEED_PC_ALIAS" = "1" ]; then
+            JSCORE_PC_DIR="$(pkg-config --variable pcfiledir javascriptcoregtk-4.1)"
+            WEBKIT_PC_DIR="$(pkg-config --variable pcfiledir webkit2gtk-4.1)"
+            sudo mkdir -p /usr/local/lib/pkgconfig
+            sudo ln -sf "$JSCORE_PC_DIR/javascriptcoregtk-4.1.pc" /usr/local/lib/pkgconfig/javascriptcoregtk-4.0.pc
+            sudo ln -sf "$WEBKIT_PC_DIR/webkit2gtk-4.1.pc" /usr/local/lib/pkgconfig/webkit2gtk-4.0.pc
+            echo "PKG_CONFIG_PATH=/usr/local/lib/pkgconfig:${PKG_CONFIG_PATH}" >> "$GITHUB_ENV"
+          fi
 
       - name: Set up cache
         uses: Swatinem/rust-cache@v2
@@ -116,14 +131,21 @@ jobs:
         run: |
           set -e
           sudo apt-get update
-          if ! apt-cache show libwebkit2gtk-4.0-dev &>/dev/null || ! apt-cache show libjavascriptcoregtk-4.0-dev &>/dev/null; then
-            echo "::error::Tauri 1.x dependencies (libwebkit2gtk-4.0-dev + libjavascriptcoregtk-4.0-dev) are unavailable on this ubuntu-latest image."
-            echo "::error::Use ubuntu-22.04 for these jobs or upgrade the Tauri/WebKit stack to 4.1-compatible crates."
+          if apt-cache show libwebkit2gtk-4.0-dev &>/dev/null && apt-cache show libjavascriptcoregtk-4.0-dev &>/dev/null; then
+            WEBKIT_PKG=libwebkit2gtk-4.0-dev
+            JSCORE_PKG=libjavascriptcoregtk-4.0-dev
+            NEED_PC_ALIAS=0
+          elif apt-cache show libwebkit2gtk-4.1-dev &>/dev/null && apt-cache show libjavascriptcoregtk-4.1-dev &>/dev/null; then
+            WEBKIT_PKG=libwebkit2gtk-4.1-dev
+            JSCORE_PKG=libjavascriptcoregtk-4.1-dev
+            NEED_PC_ALIAS=1
+          else
+            echo "::error::No compatible WebKit/JSC dev package pair found in apt cache."
             exit 1
           fi
           sudo apt-get install -y \
-            libwebkit2gtk-4.0-dev \
-            libjavascriptcoregtk-4.0-dev \
+            "$WEBKIT_PKG" \
+            "$JSCORE_PKG" \
             build-essential \
             curl \
             wget \
@@ -134,6 +156,14 @@ jobs:
             libayatana-appindicator3-dev \
             librsvg2-dev \
             patchelf
+          if [ "$NEED_PC_ALIAS" = "1" ]; then
+            JSCORE_PC_DIR="$(pkg-config --variable pcfiledir javascriptcoregtk-4.1)"
+            WEBKIT_PC_DIR="$(pkg-config --variable pcfiledir webkit2gtk-4.1)"
+            sudo mkdir -p /usr/local/lib/pkgconfig
+            sudo ln -sf "$JSCORE_PC_DIR/javascriptcoregtk-4.1.pc" /usr/local/lib/pkgconfig/javascriptcoregtk-4.0.pc
+            sudo ln -sf "$WEBKIT_PC_DIR/webkit2gtk-4.1.pc" /usr/local/lib/pkgconfig/webkit2gtk-4.0.pc
+            echo "PKG_CONFIG_PATH=/usr/local/lib/pkgconfig:${PKG_CONFIG_PATH}" >> "$GITHUB_ENV"
+          fi
 
       - name: Set up cache
         uses: Swatinem/rust-cache@v2
@@ -235,14 +265,21 @@ jobs:
         run: |
           set -e
           sudo apt-get update
-          if ! apt-cache show libwebkit2gtk-4.0-dev &>/dev/null || ! apt-cache show libjavascriptcoregtk-4.0-dev &>/dev/null; then
-            echo "::error::Tauri 1.x dependencies (libwebkit2gtk-4.0-dev + libjavascriptcoregtk-4.0-dev) are unavailable on this ubuntu-latest image."
-            echo "::error::Use ubuntu-22.04 for these jobs or upgrade the Tauri/WebKit stack to 4.1-compatible crates."
+          if apt-cache show libwebkit2gtk-4.0-dev &>/dev/null && apt-cache show libjavascriptcoregtk-4.0-dev &>/dev/null; then
+            WEBKIT_PKG=libwebkit2gtk-4.0-dev
+            JSCORE_PKG=libjavascriptcoregtk-4.0-dev
+            NEED_PC_ALIAS=0
+          elif apt-cache show libwebkit2gtk-4.1-dev &>/dev/null && apt-cache show libjavascriptcoregtk-4.1-dev &>/dev/null; then
+            WEBKIT_PKG=libwebkit2gtk-4.1-dev
+            JSCORE_PKG=libjavascriptcoregtk-4.1-dev
+            NEED_PC_ALIAS=1
+          else
+            echo "::error::No compatible WebKit/JSC dev package pair found in apt cache."
             exit 1
           fi
           sudo apt-get install -y \
-            libwebkit2gtk-4.0-dev \
-            libjavascriptcoregtk-4.0-dev \
+            "$WEBKIT_PKG" \
+            "$JSCORE_PKG" \
             build-essential \
             curl \
             wget \
@@ -253,6 +290,14 @@ jobs:
             libayatana-appindicator3-dev \
             librsvg2-dev \
             patchelf
+          if [ "$NEED_PC_ALIAS" = "1" ]; then
+            JSCORE_PC_DIR="$(pkg-config --variable pcfiledir javascriptcoregtk-4.1)"
+            WEBKIT_PC_DIR="$(pkg-config --variable pcfiledir webkit2gtk-4.1)"
+            sudo mkdir -p /usr/local/lib/pkgconfig
+            sudo ln -sf "$JSCORE_PC_DIR/javascriptcoregtk-4.1.pc" /usr/local/lib/pkgconfig/javascriptcoregtk-4.0.pc
+            sudo ln -sf "$WEBKIT_PC_DIR/webkit2gtk-4.1.pc" /usr/local/lib/pkgconfig/webkit2gtk-4.0.pc
+            echo "PKG_CONFIG_PATH=/usr/local/lib/pkgconfig:${PKG_CONFIG_PATH}" >> "$GITHUB_ENV"
+          fi
 
       - name: Set up cache
         uses: Swatinem/rust-cache@v2
