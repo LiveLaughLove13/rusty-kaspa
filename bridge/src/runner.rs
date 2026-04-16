@@ -510,7 +510,7 @@ pub async fn run(cli: Cli) -> Result<(), anyhow::Error> {
                     _ = tokio::signal::ctrl_c() => {
                         if bridge_embedded() {
                             tracing::warn!("Second Ctrl+C received; waiting for shutdown to finish");
-                            std::future::pending::<()>().await
+                            std::future::pending::<Result<(), anyhow::Error>>().await
                         } else {
                             tracing::warn!("Second Ctrl+C received, forcing exit");
                             std::process::exit(130);
