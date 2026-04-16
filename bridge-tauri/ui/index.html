@@ -83,6 +83,11 @@
       }
     }
     .setup-nav-btn {
+      display: inline-flex;
+      flex-direction: column;
+      align-items: flex-start;
+      text-align: left;
+      line-height: 1.2;
       padding: 0.38rem 0.75rem;
       border-radius: 999px;
       border: 1px solid var(--border);
@@ -102,6 +107,122 @@
       background: linear-gradient(135deg, #5eead4 0%, #14b8a6 100%);
       border-color: rgba(45, 212, 191, 0.55);
       font-weight: 600;
+    }
+    .setup-nav-btn {
+      align-items: flex-start;
+      text-align: left;
+      line-height: 1.2;
+    }
+    .setup-nav-btn__label { display: block; font-weight: inherit; }
+    .setup-nav-btn__sub {
+      display: block;
+      font-size: 10px;
+      font-weight: 500;
+      opacity: 0.88;
+      max-width: 8.5rem;
+      white-space: normal;
+    }
+    .setup-nav-btn:not(.is-active) .setup-nav-btn__sub { color: var(--muted); }
+    .setup-nav-btn.is-active .setup-nav-btn__sub { color: rgba(4, 47, 46, 0.82); }
+    .first-run-banner {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 0.75rem;
+      margin-bottom: 0.65rem;
+      padding: 0.65rem 0.85rem;
+      border-radius: 10px;
+      border: 1px solid rgba(45, 212, 191, 0.35);
+      background: rgba(45, 212, 191, 0.08);
+      font-size: 13px;
+      color: var(--text);
+      line-height: 1.45;
+    }
+    .first-run-banner[hidden] { display: none !important; }
+    .first-run-banner p { margin: 0; flex: 1; min-width: 0; }
+    .first-run-banner__dismiss {
+      flex-shrink: 0;
+      width: 1.75rem;
+      height: 1.75rem;
+      border: none;
+      border-radius: 6px;
+      background: rgba(0,0,0,0.2);
+      color: var(--muted);
+      font-size: 1.1rem;
+      line-height: 1;
+      cursor: pointer;
+    }
+    .first-run-banner__dismiss:hover { color: var(--text); background: rgba(0,0,0,0.35); }
+    .quick-start-callout {
+      margin-bottom: 1.1rem;
+      padding: 0.85rem 1rem;
+      border-radius: 10px;
+      border: 1px solid rgba(45, 212, 191, 0.28);
+      background: linear-gradient(165deg, rgba(20, 28, 40, 0.95) 0%, rgba(15, 20, 32, 0.98) 100%);
+    }
+    .quick-start-steps {
+      margin: 0;
+      padding-left: 1.2rem;
+      color: var(--text);
+      font-size: 13px;
+      line-height: 1.55;
+    }
+    .quick-start-steps li { margin: 0.25rem 0; }
+    .btn-inline-link {
+      padding: 0;
+      border: none;
+      background: none;
+      color: var(--teal);
+      font-size: inherit;
+      font-family: inherit;
+      font-weight: 600;
+      cursor: pointer;
+      text-decoration: underline;
+      text-underline-offset: 2px;
+    }
+    .btn-inline-link:hover { color: #5eead4; }
+    .section-eyebrow {
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--text);
+      margin: 0 0 0.2rem;
+      letter-spacing: 0.02em;
+    }
+    .section-eyebrow-hint {
+      margin: 0 0 0.65rem !important;
+      font-size: 12px;
+    }
+    .advanced-fold {
+      margin-top: 1rem;
+      border-radius: 10px;
+      border: 1px solid var(--border);
+      background: rgba(0, 0, 0, 0.18);
+      overflow: hidden;
+    }
+    .advanced-fold > summary {
+      list-style: none;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: baseline;
+      gap: 0.35rem 0.75rem;
+      padding: 0.75rem 1rem;
+      cursor: pointer;
+      user-select: none;
+      font-weight: 600;
+      font-size: 13px;
+      color: var(--text);
+    }
+    .advanced-fold > summary::-webkit-details-marker { display: none; }
+    .advanced-fold__title { color: var(--teal); }
+    .advanced-fold__sub {
+      font-weight: 400;
+      font-size: 12px;
+      color: var(--muted);
+      flex: 1 1 100%;
+    }
+    .advanced-fold__body {
+      padding: 0 1rem 1rem;
+      border-top: 1px solid rgba(255,255,255,0.05);
     }
     .setup-nav-btn[data-setup-jump="detCpu"] { display: none; }
     .setup-nav-btn[data-setup-jump="detCpu"].is-cpu-nav-visible { display: inline-block; }
@@ -659,7 +780,7 @@
             <stop stop-color="#5eead4"/><stop offset="1" stop-color="#14b8a6"/>
           </linearGradient></defs>
         </svg>
-        <h1>Kaspa Stratum Bridge</h1>
+        <h1>RKStratum Bridge</h1>
       </div>
       <div class="top-actions">
         <button type="button" class="btn-ghost" id="btnLogs" title="Toggle log hints">
@@ -692,14 +813,36 @@
 
     <div id="view-setup">
     <nav class="setup-section-nav" aria-label="Setup sections">
-      <p class="setup-nav-hint">Each tab is its own screen; <strong>Save</strong> and <strong>Start bridge</strong> stay at the bottom.</p>
-      <button type="button" class="setup-nav-btn is-active" data-setup-jump="detStratum">Mode</button>
-      <button type="button" class="setup-nav-btn" data-setup-jump="detHow">Help</button>
-      <button type="button" class="setup-nav-btn" data-setup-jump="detGlobal">Connection</button>
-      <button type="button" class="setup-nav-btn" data-setup-jump="detInstanceDefaults">Instance defaults</button>
-      <button type="button" class="setup-nav-btn" data-setup-jump="detCpu" id="setupNavCpu">CPU miner</button>
-      <button type="button" class="setup-nav-btn" data-setup-jump="detInstances">Instances &amp; kaspad</button>
+      <p class="setup-nav-hint">Each tab is one screen. <strong>Save</strong> and <strong>Start bridge</strong> stay at the bottom.</p>
+      <button type="button" class="setup-nav-btn is-active" data-setup-jump="detStratum">
+        <span class="setup-nav-btn__label">Mode</span>
+        <span class="setup-nav-btn__sub">Mainnet / testnet</span>
+      </button>
+      <button type="button" class="setup-nav-btn" data-setup-jump="detHow">
+        <span class="setup-nav-btn__label">Help</span>
+        <span class="setup-nav-btn__sub">How to run</span>
+      </button>
+      <button type="button" class="setup-nav-btn" data-setup-jump="detGlobal">
+        <span class="setup-nav-btn__label">Connection</span>
+        <span class="setup-nav-btn__sub">Node &amp; ports</span>
+      </button>
+      <button type="button" class="setup-nav-btn" data-setup-jump="detInstanceDefaults">
+        <span class="setup-nav-btn__label">Extra ports</span>
+        <span class="setup-nav-btn__sub">Defaults for more listeners</span>
+      </button>
+      <button type="button" class="setup-nav-btn" data-setup-jump="detCpu" id="setupNavCpu">
+        <span class="setup-nav-btn__label">CPU miner</span>
+        <span class="setup-nav-btn__sub">Optional</span>
+      </button>
+      <button type="button" class="setup-nav-btn" data-setup-jump="detInstances">
+        <span class="setup-nav-btn__label">Listeners</span>
+        <span class="setup-nav-btn__sub">Ports &amp; kaspad args</span>
+      </button>
     </nav>
+    <div id="firstRunHint" class="first-run-banner" role="status" hidden>
+      <p>New here? Open <strong>Help</strong> for a short guide, then <strong>Connection</strong> to set the node and mining port.</p>
+      <button type="button" class="first-run-banner__dismiss" id="btnDismissFirstRun" aria-label="Dismiss tip">×</button>
+    </div>
     <main class="setup-main setup-pages-mode" id="setupScroll">
       <details class="card setup-page is-setup-active" id="detStratum" open>
         <summary>
@@ -722,7 +865,7 @@
         </summary>
         <div class="card-body">
           <p class="hint" style="margin-top:0;margin-bottom:1rem">
-            Run the bridge from this app: set global options on the <strong>Connection</strong> tab, then click <strong>Start bridge</strong>. The operator dashboard (bundled in this app) loads below the header. Use <strong>Stop bridge</strong> in the top bar when you are done (or <strong>Bridge → Stop bridge</strong> in the menu). If you reload the window (<kbd>F5</kbd>) while the bridge is still running, the app reconnects to the dashboard instead of showing only this setup screen.
+            <strong>Short version:</strong> open <strong>Connection</strong>, set your node address and Stratum port, then <strong>Save</strong> and <strong>Start bridge</strong>. The dashboard opens in this window. Use <strong>Stop bridge</strong> when finished (or <strong>Bridge → Stop bridge</strong> in the menu). Reloading (<kbd>F5</kbd>) while the bridge is running reconnects to the dashboard.
           </p>
           <div class="cta-row">
             <button type="button" class="btn-teal" id="btnDocs">
@@ -741,22 +884,36 @@
       <details class="card setup-page" id="detGlobal">
         <summary>
           <span class="summary-left">
-            Global Settings
-            <span class="summary-sub">These settings apply to all Stratum instances</span>
+            Connection
+            <span class="summary-sub">Node address, mining ports, and optional tuning</span>
           </span>
           <svg class="chev" viewBox="0 0 24 24" fill="currentColor"><path d="M7 10l5 5 5-5z"/></svg>
         </summary>
         <div class="card-body">
+          <div class="quick-start-callout" role="region" aria-label="Quick start">
+            <strong style="display:block;margin-bottom:0.45rem;font-size:13px;color:var(--teal);">Quick start</strong>
+            <p class="hint" style="margin:0 0 0.55rem">Typical single-listener setup:</p>
+            <ol class="quick-start-steps">
+              <li>Enter your <strong>Kaspa node address</strong> under Essential.</li>
+              <li>Set <strong>Stratum listen port</strong> (and difficulty if needed) under Mining ports.</li>
+              <li><strong>Save configuration</strong>, then <strong>Start bridge</strong> at the bottom.</li>
+            </ol>
+            <p class="hint" style="margin:0.65rem 0 0">Want the full walkthrough? Use the <button type="button" class="btn-inline-link" id="btnJumpHelp">Help</button> tab.</p>
+          </div>
+
           <div class="field span-2">
             <label for="config">Config file (optional)</label>
             <input type="text" id="config" autocomplete="off" placeholder="Path to config.yaml" />
             <p class="hint" id="configHint"></p>
           </div>
+
+          <p class="section-eyebrow">Essential</p>
+          <p class="hint section-eyebrow-hint">RPC address of your node and basic bridge timing.</p>
           <div class="form-pairs">
             <div class="form-pair">
               <label for="kaspadAddress">Kaspa node address</label>
               <input type="text" id="kaspadAddress" autocomplete="off" placeholder="localhost:16110" />
-              <label class="check-line"><input type="checkbox" id="printStatsCb" /><span>Print statistics</span></label>
+              <label class="check-line"><input type="checkbox" id="printStatsCb" /><span>Print statistics to console</span></label>
             </div>
             <div class="form-pair">
               <label for="blockWaitTimeMs">Block wait time (ms)</label>
@@ -764,73 +921,84 @@
               <label class="check-line"><input type="checkbox" id="logToFileCb" /><span>Log to file</span></label>
             </div>
           </div>
-          <p class="hint" style="margin-top:0.35rem">Checkboxes pass <code>--flag true</code> when checked; leave unchecked to use your config file defaults (not “force false”).</p>
-          <div class="setup-grid" style="margin-top:1rem">
-          <div class="field">
-            <label for="nodeMode">Node mode</label>
-            <select id="nodeMode">
-              <option value="">From config / default</option>
-              <option value="external">External kaspad (RPC)</option>
-              <option value="inprocess">In-process kaspad</option>
-            </select>
-          </div>
-          <div class="field">
-            <label for="appdir">App data directory (optional)</label>
-            <input type="text" id="appdir" autocomplete="off" placeholder="Kaspa node data dir" />
-            <p class="hint" id="appdirHint"></p>
-          </div>
-          <div class="field">
-            <label for="coinbase">Coinbase tag suffix (optional)</label>
-            <input type="text" id="coinbase" autocomplete="off" />
-          </div>
-          <div class="field">
-            <label for="webDashboardPort">Web dashboard port (optional)</label>
-            <input type="text" id="webDashboardPort" autocomplete="off" placeholder=":3030 or 0.0.0.0:3030" />
-          </div>
-          <div class="field">
-            <label for="healthCheckPort">Health check port (optional)</label>
-            <input type="text" id="healthCheckPort" autocomplete="off" placeholder=":8080" />
-          </div>
-          <div class="field">
-            <label for="sharesPerMin">Shares per minute target (optional)</label>
-            <input type="text" id="sharesPerMin" autocomplete="off" placeholder="30" />
-          </div>
-          <div class="field">
-            <label for="extranonceSize">Extranonce size (optional)</label>
-            <input type="text" id="extranonceSize" autocomplete="off" placeholder="2" />
-          </div>
-          </div>
-          <p class="section-label span-2">Single-instance CLI overrides</p>
+          <p class="hint" style="margin-top:0.35rem">Checked options turn features on for this run. Leave unchecked to follow your config file (not “force off”).</p>
+
+          <p class="section-eyebrow" style="margin-top:1rem">Mining ports — main listener</p>
+          <p class="hint section-eyebrow-hint">Where miners connect; optional metrics port and starting difficulty.</p>
           <div class="field-grid-3 span-2">
             <div class="field" style="margin-bottom:0">
               <label for="stratumPort">Stratum listen port</label>
               <input type="text" id="stratumPort" autocomplete="off" placeholder=":5555" />
             </div>
             <div class="field" style="margin-bottom:0">
-              <label for="promPort">Prometheus port</label>
-              <input type="text" id="promPort" autocomplete="off" placeholder=":2114" />
+              <label for="promPort" title="Prometheus scrape / metrics endpoint">Metrics port (Prometheus)</label>
+              <input type="text" id="promPort" autocomplete="off" placeholder=":2114" title="Prometheus metrics port" />
             </div>
             <div class="field" style="margin-bottom:0">
-              <label for="minShareDiff">Min share diff</label>
+              <label for="minShareDiff" title="Minimum share difficulty for this listener">Min share difficulty</label>
               <input type="text" id="minShareDiff" autocomplete="off" placeholder="e.g. 8192" />
             </div>
           </div>
-          <p class="hint span-2" style="margin-top:0">For several listeners, use the <strong>Instances &amp; kaspad</strong> tab. For explicit <code>false</code> flags, use <code>config.yaml</code>.</p>
-          <p class="section-label span-2" style="margin-top:0.75rem">Optional flags (enable via checkbox)</p>
-          <div class="check-grid span-2">
-            <label class="check-line"><input type="checkbox" id="varDiffCb" /><span>Variable difficulty</span></label>
-            <label class="check-line"><input type="checkbox" id="varDiffStatsCb" /><span>Variable difficulty stats</span></label>
-            <label class="check-line"><input type="checkbox" id="pow2ClampCb" /><span>Pow2 clamp</span></label>
-            <label class="check-line"><input type="checkbox" id="approximateGeoLookupCb" /><span>Approximate geo lookup</span></label>
-          </div>
+          <p class="hint span-2" style="margin-top:0.35rem">For <strong>multiple Stratum ports</strong>, use the <strong>Listeners</strong> tab. To turn options off via file, edit <code>config.yaml</code>.</p>
+
+          <details class="advanced-fold">
+            <summary>
+              <span class="advanced-fold__title">Advanced</span>
+              <span class="advanced-fold__sub">Node mode, data paths, dashboard &amp; health ports, variable difficulty…</span>
+            </summary>
+            <div class="advanced-fold__body">
+              <div class="setup-grid">
+                <div class="field">
+                  <label for="nodeMode">Node mode</label>
+                  <select id="nodeMode">
+                    <option value="">From config / default</option>
+                    <option value="external">External kaspad (RPC)</option>
+                    <option value="inprocess">In-process kaspad</option>
+                  </select>
+                </div>
+                <div class="field">
+                  <label for="appdir">App data directory (optional)</label>
+                  <input type="text" id="appdir" autocomplete="off" placeholder="Kaspa node data dir" />
+                  <p class="hint" id="appdirHint"></p>
+                </div>
+                <div class="field">
+                  <label for="coinbase">Coinbase tag suffix (optional)</label>
+                  <input type="text" id="coinbase" autocomplete="off" />
+                </div>
+                <div class="field">
+                  <label for="webDashboardPort">Web dashboard port (optional)</label>
+                  <input type="text" id="webDashboardPort" autocomplete="off" placeholder=":3030 or 0.0.0.0:3030" />
+                </div>
+                <div class="field">
+                  <label for="healthCheckPort">Health check port (optional)</label>
+                  <input type="text" id="healthCheckPort" autocomplete="off" placeholder=":8080" />
+                </div>
+                <div class="field">
+                  <label for="sharesPerMin">Shares per minute target (optional)</label>
+                  <input type="text" id="sharesPerMin" autocomplete="off" placeholder="30" />
+                </div>
+                <div class="field">
+                  <label for="extranonceSize">Extranonce size (optional)</label>
+                  <input type="text" id="extranonceSize" autocomplete="off" placeholder="2" />
+                </div>
+              </div>
+              <p class="section-label span-2" style="margin-top:0.75rem">Optional bridge flags</p>
+              <div class="check-grid span-2">
+                <label class="check-line"><input type="checkbox" id="varDiffCb" /><span>Variable difficulty</span></label>
+                <label class="check-line"><input type="checkbox" id="varDiffStatsCb" /><span>Variable difficulty stats</span></label>
+                <label class="check-line"><input type="checkbox" id="pow2ClampCb" /><span>Pow2 clamp</span></label>
+                <label class="check-line"><input type="checkbox" id="approximateGeoLookupCb" /><span>Approximate geo lookup</span></label>
+              </div>
+            </div>
+          </details>
         </div>
       </details>
 
       <details class="card setup-page" id="detInstanceDefaults">
         <summary>
           <span class="summary-left">
-            Instance CLI defaults
-            <span class="summary-sub">Optional <code>--instance-*</code> flags applied when starting extra listeners via <code>--instance</code></span>
+            Extra port defaults
+            <span class="summary-sub">Optional defaults for additional Stratum listeners</span>
           </span>
           <svg class="chev" viewBox="0 0 24 24" fill="currentColor"><path d="M7 10l5 5 5-5z"/></svg>
         </summary>
@@ -841,7 +1009,7 @@
               <input type="text" id="instanceSharesPerMin" autocomplete="off" placeholder="30" />
             </div>
           </div>
-          <p class="hint" style="margin-top:0.65rem">Applied as <code>--instance-*</code> when you add extra listeners on the <strong>Instances &amp; kaspad</strong> tab.</p>
+          <p class="hint" style="margin-top:0.65rem">Applied when you add rows on the <strong>Listeners</strong> tab (extra Stratum ports).</p>
           <div class="check-grid" style="margin-top:0.65rem">
             <label class="check-line"><input type="checkbox" id="instanceLogToFileCb" /><span>Instance log to file</span></label>
             <label class="check-line"><input type="checkbox" id="instanceVarDiffCb" /><span>Instance variable difficulty</span></label>
@@ -888,14 +1056,14 @@
       <details class="card setup-page" id="detInstances">
         <summary>
           <span class="summary-left">
-            Stratum instances
-            <span class="summary-sub">Configure multiple mining ports with different difficulty settings</span>
+            Listeners &amp; kaspad
+            <span class="summary-sub">Extra Stratum ports and optional in-process node arguments</span>
           </span>
           <svg class="chev" viewBox="0 0 24 24" fill="currentColor"><path d="M7 10l5 5 5-5z"/></svg>
         </summary>
         <div class="card-body">
           <div class="instances-toolbar">
-            <p class="hint" style="margin:0;flex:1;min-width:12rem">Each row becomes one <code>--instance</code> flag (port, difficulty, Prometheus).</p>
+            <p class="hint" style="margin:0;flex:1;min-width:12rem">Each row is an extra mining port (port, difficulty, metrics port).</p>
             <button type="button" class="btn-add-instance" id="btnAddInstance">+ Add instance</button>
           </div>
           <div id="instanceList" class="instance-list" aria-live="polite"></div>

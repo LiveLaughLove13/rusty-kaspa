@@ -1,5 +1,6 @@
     const LS_KEY = 'rkstratumBridgeDesktopSetupV2';
     const LS_KEY_LEGACY = 'rkstratumBridgeDesktopSetupV1';
+    const LS_FIRST_RUN_DISMISSED = 'rkstratumBridgeDesktopFirstRunDismissed';
     const invoke = (cmd, args) => window.__TAURI__?.invoke?.(cmd, args);
 
     let chromeWired = false;
@@ -648,6 +649,26 @@
       });
     }
 
+    function initFirstRunUx() {
+      const banner = document.getElementById('firstRunHint');
+      const dismiss = document.getElementById('btnDismissFirstRun');
+      if (!banner || !dismiss) return;
+      if (localStorage.getItem(LS_FIRST_RUN_DISMISSED) === '1') {
+        banner.hidden = true;
+        return;
+      }
+      banner.hidden = false;
+      dismiss.addEventListener('click', () => {
+        localStorage.setItem(LS_FIRST_RUN_DISMISSED, '1');
+        banner.hidden = true;
+      });
+    }
+
+    function wireConnectionHelpJump() {
+      const b = document.getElementById('btnJumpHelp');
+      if (b) b.addEventListener('click', () => showSetupPage('detHow'));
+    }
+
     let setupSectionNavWired = false;
     function wireSetupSectionNav() {
       if (setupSectionNavWired) return;
@@ -671,6 +692,8 @@
       const d = await invoke('gui_defaults');
       await maybeShowCpuSection();
       wireSetupSectionNav();
+      initFirstRunUx();
+      wireConnectionHelpJump();
       syncSetupNavFromActivePage();
       applySaved();
       initInstancesEditor();
@@ -692,6 +715,8 @@
       document.getElementById('btnRunNode').addEventListener('click', () => {
         document.getElementById('nodeMode').value = 'inprocess';
         showSetupPage('detGlobal');
+        const adv = document.querySelector('#detGlobal .advanced-fold');
+        if (adv) adv.open = true;
       });
       document.getElementById('btnSave').addEventListener('click', saveConfiguration);
 
