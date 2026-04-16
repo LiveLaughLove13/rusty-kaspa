@@ -52,6 +52,7 @@ members = [
     "components/connectionmanager",
     "components/consensusmanager",
     "bridge",
+    "bridge-tauri/src-tauri",
     "database",
     "crypto/txscript",
     "crypto/txscript/errors",

@@ -8,7 +8,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="static/css/site.css">
+  <link rel="stylesheet" href="css/site.css">
 </head>
 <body>
   <nav class="rk-main-nav border-b border-card relative rounded-b-2xl shadow-lg shadow-black/25">
@@ -18,14 +18,14 @@
           <div id="rkNavClockSlot" class="shrink-0"></div>
           <div class="flex flex-wrap items-center gap-2 w-full sm:w-auto sm:ml-auto">
           <nav class="rk-dash-subnav flex flex-wrap items-center gap-1 sm:gap-1.5 rounded-xl border border-white/[0.08] bg-black/25 px-2 py-1.5 sm:px-2.5" aria-label="Dashboard pages">
-            <a class="rk-dash-subnav__link rk-dash-subnav__link--active" href="/">Overview</a>
-            <a class="rk-dash-subnav__link" href="/metrics.html">Metrics</a>
-            <a class="rk-dash-subnav__link" href="/node.html">Node</a>
-            <a class="rk-dash-subnav__link" href="/trends.html">Trends</a>
-            <a class="rk-dash-subnav__link" href="/blocks.html">Blocks</a>
-            <a class="rk-dash-subnav__link" href="/workers.html">Workers</a>
+            <a class="rk-dash-subnav__link rk-dash-subnav__link--active" href="index.html">Overview</a>
+            <a class="rk-dash-subnav__link" href="metrics.html">Metrics</a>
+            <a class="rk-dash-subnav__link" href="node.html">Node</a>
+            <a class="rk-dash-subnav__link" href="trends.html">Trends</a>
+            <a class="rk-dash-subnav__link" href="blocks.html">Blocks</a>
+            <a class="rk-dash-subnav__link" href="workers.html">Workers</a>
           </nav>
-            <a class="rk-nav-cta rk-nav-cta--ghost" href="/raw.html">Raw</a>
+            <a class="rk-nav-cta rk-nav-cta--ghost" href="raw.html">Raw</a>
             <a class="rk-nav-cta rk-nav-cta--primary"
                href="https://github.com/kaspanet" target="_blank" rel="noopener noreferrer">
               <span aria-hidden="true">
@@ -160,7 +160,8 @@
   </div>
 
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js" crossorigin="anonymous"></script>
-  <script src="static/js/dashboard.js"></script>
+  <script src="js/api-base.js"></script>
+  <script src="js/dashboard.js"></script>
 
   <div id="toast" class="hidden fixed right-4 top-4 z-50 bg-surface-1 border border-card px-4 py-2 rounded-lg text-sm text-white"></div>
 </body>

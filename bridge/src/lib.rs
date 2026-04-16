@@ -70,6 +70,16 @@ pub use util::net_utils;
 pub mod prom;
 pub mod share_handler;
 
+pub mod app_dirs;
+pub mod cli;
+pub mod health_check;
+pub mod inprocess_node;
+pub mod tracing_setup;
+pub mod runner;
+
+#[cfg(test)]
+mod tests;
+
 mod bridge_error;
 
 #[cfg(feature = "rkstratum_cpu_miner")]
@@ -109,3 +119,5 @@ pub use stratum_listener::{
 /// Per-instance stratum listener settings (distinct from `BridgeConfig` in `app_config`).
 pub use stratum_server::BridgeConfig as StratumServerBridgeConfig;
 pub use stratum_server::{listen_and_serve, listen_and_serve_with_shutdown, start_block_template_listener_with_api};
+
+pub use runner::{config_yaml_candidate_paths, default_dashboard_iframe_url, request_bridge_shutdown, run};

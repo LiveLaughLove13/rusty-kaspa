@@ -3,7 +3,7 @@ use std::collections::HashSet;
 use std::path::PathBuf;
 use std::time::Duration;
 
-use kaspa_stratum_bridge::{BridgeConfig, InstanceConfig, net_utils::normalize_port};
+use crate::{BridgeConfig, InstanceConfig, net_utils::normalize_port};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, ValueEnum)]
 pub enum NodeMode {

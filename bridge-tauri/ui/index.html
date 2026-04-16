@@ -1,0 +1,798 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>RKStratum Bridge</title>
+  <style>
+    :root {
+      --bg-deep: #0c0e14;
+      --bg-panel: #141824;
+      --bg-elevated: #1a2030;
+      --border: rgba(100, 140, 180, 0.22);
+      --text: #e8ecf4;
+      --muted: #8b95a8;
+      --teal: #2dd4bf;
+      --teal-dim: rgba(45, 212, 191, 0.15);
+      --green: #34d399;
+      --green-glow: rgba(52, 211, 153, 0.35);
+      --gray-dot: #5c6578;
+      --err: #f87171;
+      --radius: 12px;
+    }
+    * { box-sizing: border-box; }
+    html, body { margin: 0; height: 100%; }
+    body {
+      font-family: "Segoe UI", system-ui, -apple-system, sans-serif;
+      background: linear-gradient(165deg, var(--bg-deep) 0%, #101525 45%, #0a0d14 100%);
+      color: var(--text);
+      font-size: 14px;
+      line-height: 1.45;
+    }
+
+    #shell {
+      display: none;
+      flex-direction: column;
+      height: 100vh;
+      padding: 0 1.25rem 0.75rem;
+      box-sizing: border-box;
+    }
+    #view-setup {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      overflow: auto;
+      min-height: 0;
+      max-width: 920px;
+      width: 100%;
+      margin: 0 auto;
+      padding-bottom: 0.5rem;
+    }
+    #view-setup main { flex: 1; }
+    #view-dashboard {
+      display: none;
+      flex: 1;
+      flex-direction: column;
+      min-height: 0;
+      margin-top: 0.35rem;
+    }
+    #view-dashboard.is-visible {
+      display: flex;
+    }
+    #dashFrame {
+      flex: 1;
+      width: 100%;
+      min-height: 240px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      background: #05060a;
+    }
+    .running-chrome {
+      display: none;
+      align-items: center;
+      gap: 0.5rem;
+      flex-wrap: wrap;
+    }
+    .running-chrome.is-visible { display: flex; }
+    .setup-hidden { display: none !important; }
+    .btn-danger {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+      padding: 0.45rem 0.85rem;
+      border-radius: 8px;
+      border: 1px solid rgba(248, 113, 113, 0.45);
+      background: linear-gradient(135deg, #7f1d1d 0%, #450a0a 100%);
+      color: #fecaca;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    .btn-danger:hover { filter: brightness(1.08); }
+    .btn-danger:disabled { opacity: 0.55; cursor: not-allowed; }
+
+    /* Header */
+    .top-bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1rem;
+      padding: 1rem 0 1.1rem;
+      flex-wrap: wrap;
+      border-bottom: 1px solid var(--border);
+    }
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 0.65rem;
+    }
+    .brand svg { flex-shrink: 0; filter: drop-shadow(0 0 12px rgba(45, 212, 191, 0.45)); }
+    .brand h1 {
+      margin: 0;
+      font-size: 1.15rem;
+      font-weight: 600;
+      letter-spacing: -0.02em;
+    }
+    .top-actions {
+      display: flex;
+      align-items: center;
+      gap: 0.65rem;
+      flex-wrap: wrap;
+    }
+    .btn-ghost {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      padding: 0.45rem 0.75rem;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      background: var(--bg-elevated);
+      color: var(--muted);
+      font-size: 13px;
+      cursor: pointer;
+      transition: border-color 0.15s, color 0.15s;
+    }
+    .btn-ghost:hover { border-color: rgba(45, 212, 191, 0.4); color: var(--text); }
+    .status-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      font-size: 12px;
+      color: var(--muted);
+      padding: 0.35rem 0.65rem;
+      border-radius: 999px;
+      background: rgba(0, 0, 0, 0.25);
+      border: 1px solid var(--border);
+    }
+    .status-pill .dot {
+      width: 8px; height: 8px;
+      border-radius: 50%;
+      background: var(--gray-dot);
+      box-shadow: 0 0 0 2px rgba(0,0,0,0.2);
+    }
+    .status-pill.on .dot {
+      background: var(--green);
+      box-shadow: 0 0 10px var(--green-glow);
+    }
+    .status-pill.warn .dot { background: #fbbf24; }
+
+    /* Local time (next to Show logs) */
+    .shell-local-time {
+      display: inline-flex;
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 0.12rem;
+      padding: 0.35rem 0.65rem;
+      border-radius: 10px;
+      border: 1px solid rgba(112, 199, 186, 0.22);
+      background: linear-gradient(165deg, rgba(15, 21, 30, 0.88) 0%, rgba(8, 12, 20, 0.94) 100%);
+      min-width: 0;
+      line-height: 1.25;
+    }
+    .shell-local-time .shell-local-time__label {
+      font-size: 10px;
+      font-weight: 600;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      color: rgba(112, 199, 186, 0.78);
+    }
+    .shell-local-time .shell-local-time__value {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text);
+      font-variant-numeric: tabular-nums;
+    }
+
+    /* Log drawer */
+    .log-drawer {
+      display: none;
+      margin: 0 0 1rem;
+      padding: 1rem 1.1rem;
+      border-radius: var(--radius);
+      background: var(--bg-panel);
+      border: 1px solid var(--border);
+      font-size: 13px;
+      color: var(--muted);
+    }
+    .log-drawer.open { display: block; }
+    .log-drawer p { margin: 0 0 0.65rem; }
+    .log-drawer .btn-row { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-top: 0.5rem; }
+
+    /* Collapsible cards */
+    main { flex: 1; display: flex; flex-direction: column; gap: 0.65rem; min-height: 0; }
+    details.card {
+      border-radius: var(--radius);
+      background: var(--bg-panel);
+      border: 1px solid var(--border);
+      overflow: hidden;
+    }
+    details.card summary {
+      list-style: none;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.75rem;
+      padding: 0.85rem 1.1rem;
+      cursor: pointer;
+      user-select: none;
+      font-weight: 600;
+      font-size: 14px;
+    }
+    details.card summary::-webkit-details-marker { display: none; }
+    .summary-left { display: flex; flex-direction: column; gap: 0.2rem; text-align: left; }
+    .summary-sub { font-weight: 400; font-size: 12px; color: var(--muted); }
+    .chev {
+      width: 1.25rem; height: 1.25rem;
+      color: var(--muted);
+      transition: transform 0.2s ease;
+      flex-shrink: 0;
+    }
+    details.card[open] .chev { transform: rotate(180deg); }
+    .card-body { padding: 0 1.1rem 1.1rem; border-top: 1px solid rgba(255,255,255,0.04); }
+
+    label { display: block; font-size: 12px; color: var(--muted); margin-bottom: 0.35rem; }
+    .field { margin-bottom: 0.85rem; }
+    input[type="text"], select, textarea {
+      width: 100%;
+      background: var(--bg-deep);
+      color: var(--text);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 0.5rem 0.65rem;
+      font-size: 14px;
+    }
+    textarea {
+      min-height: 5.5rem;
+      font-family: ui-monospace, "Cascadia Code", Consolas, monospace;
+      font-size: 12px;
+      resize: vertical;
+    }
+    .row { display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; }
+    .row input[type="checkbox"] { width: auto; }
+    .hint { font-size: 12px; color: var(--muted); margin-top: 0.35rem; line-height: 1.4; }
+
+    .cta-row { display: flex; flex-wrap: wrap; gap: 0.65rem; margin-top: 0.5rem; }
+    .btn-teal {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.45rem;
+      padding: 0.55rem 1rem;
+      border-radius: 10px;
+      border: none;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      background: linear-gradient(135deg, #14b8a6 0%, #0d9488 100%);
+      color: #04120f;
+      box-shadow: 0 0 24px rgba(20, 184, 166, 0.35);
+    }
+    .btn-teal:hover { filter: brightness(1.06); }
+    .btn-muted {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.45rem;
+      padding: 0.55rem 1rem;
+      border-radius: 10px;
+      border: 1px solid var(--border);
+      background: var(--bg-elevated);
+      color: var(--text);
+      font-size: 14px;
+      font-weight: 500;
+      cursor: pointer;
+    }
+    .btn-muted:hover { border-color: rgba(148, 163, 184, 0.35); }
+
+    /* Footer */
+    .footer-bar {
+      display: flex;
+      justify-content: flex-end;
+      align-items: center;
+      gap: 0.75rem;
+      flex-wrap: wrap;
+      padding: 1.15rem 0 0;
+      margin-top: auto;
+      border-top: 1px solid var(--border);
+    }
+    .btn-save {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.45rem;
+      padding: 0.6rem 1.15rem;
+      border-radius: 10px;
+      border: none;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      background: linear-gradient(135deg, #2dd4bf 0%, #14b8a6 100%);
+      color: #051010;
+      box-shadow: 0 4px 20px rgba(45, 212, 191, 0.25);
+    }
+    .btn-start {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.65rem 1.35rem;
+      border-radius: 10px;
+      border: none;
+      font-size: 15px;
+      font-weight: 700;
+      cursor: pointer;
+      background: linear-gradient(135deg, #4ade80 0%, #22c55e 55%, #16a34a 100%);
+      color: #052e14;
+      box-shadow: 0 0 28px var(--green-glow), 0 4px 14px rgba(22, 163, 74, 0.35);
+    }
+    .btn-start:disabled { opacity: 0.5; cursor: not-allowed; filter: grayscale(0.3); }
+
+    #err {
+      margin-top: 0.75rem;
+      padding: 0.65rem 0.85rem;
+      border-radius: 8px;
+      background: rgba(248, 113, 113, 0.12);
+      border: 1px solid rgba(248, 113, 113, 0.35);
+      color: var(--err);
+      font-size: 13px;
+      display: none;
+      white-space: pre-wrap;
+    }
+    #err.show { display: block; }
+
+    #toast {
+      position: fixed;
+      bottom: 1.5rem;
+      left: 50%;
+      transform: translateX(-50%) translateY(120%);
+      padding: 0.55rem 1.1rem;
+      border-radius: 999px;
+      background: var(--bg-elevated);
+      border: 1px solid var(--border);
+      color: var(--text);
+      font-size: 13px;
+      opacity: 0;
+      transition: transform 0.25s ease, opacity 0.25s ease;
+      z-index: 100;
+      pointer-events: none;
+    }
+    #toast.show {
+      transform: translateX(-50%) translateY(0);
+      opacity: 1;
+    }
+
+    #loader {
+      text-align: center;
+      max-width: 28rem;
+      margin: 5rem auto;
+      line-height: 1.6;
+    }
+    #loader p { margin: 0.4rem 0; color: var(--muted); }
+    .loader-title { color: var(--text) !important; font-size: 1.05rem; }
+  </style>
+</head>
+<body>
+  <div id="shell">
+    <header class="top-bar">
+      <div class="brand">
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+          <path d="M13 2L3 14h7l-1 8 11-12h-7l0-8z" fill="url(#g)" stroke="#2dd4bf" stroke-width="0.5"/>
+          <defs><linearGradient id="g" x1="3" y1="2" x2="21" y2="22" gradientUnits="userSpaceOnUse">
+            <stop stop-color="#5eead4"/><stop offset="1" stop-color="#14b8a6"/>
+          </linearGradient></defs>
+        </svg>
+        <h1>Kaspa Stratum Bridge</h1>
+      </div>
+      <div class="top-actions">
+        <button type="button" class="btn-ghost" id="btnLogs" title="Toggle log hints">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6zm4 18H6V4h7v5h5v11z"/></svg>
+          Show logs
+        </button>
+        <div class="shell-local-time" role="status" aria-live="polite" title="Your local time">
+          <span class="shell-local-time__label">Local time</span>
+          <span class="shell-local-time__value" id="shellLocalTime">—</span>
+        </div>
+        <span class="status-pill" id="pillNode"><span class="dot"></span> Node: <span id="txtNode">Not connected</span></span>
+        <span class="status-pill" id="pillBridge"><span class="dot"></span> Bridge: <span id="txtBridge">Stopped</span></span>
+        <div class="running-chrome" id="runningChrome">
+          <button type="button" class="btn-danger" id="btnStop" title="Stop the embedded bridge process">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M6 6h12v12H6z"/></svg>
+            Stop bridge
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <div class="log-drawer" id="logDrawer">
+      <p>Bridge output is printed to the developer console when you run <code>cargo tauri dev</code>. With a release build, enable <code>log_to_file</code> in your config to capture logs on disk.</p>
+      <div class="btn-row">
+        <button type="button" class="btn-muted" id="btnRevealExe">Open executable folder</button>
+      </div>
+    </div>
+
+    <div id="view-setup">
+    <main>
+      <details class="card" id="detStratum">
+        <summary>
+          <span class="summary-left">Stratum mode</span>
+          <svg class="chev" viewBox="0 0 24 24" fill="currentColor"><path d="M7 10l5 5 5-5z"/></svg>
+        </summary>
+        <div class="card-body">
+          <div class="field row">
+            <input type="checkbox" id="testnet" />
+            <label for="testnet" style="margin:0">Testnet</label>
+          </div>
+          <p class="hint">Use testnet for development. Mainnet is the default when this is off and your config does not override it.</p>
+        </div>
+      </details>
+
+      <details class="card" id="detHow" open>
+        <summary>
+          <span class="summary-left">How to start the Stratum bridge</span>
+          <svg class="chev" viewBox="0 0 24 24" fill="currentColor"><path d="M7 10l5 5 5-5z"/></svg>
+        </summary>
+        <div class="card-body">
+          <p class="hint" style="margin-top:0;margin-bottom:1rem">
+            Run the bridge from this app: set global options below, then click <strong>Start bridge</strong>. The operator dashboard (bundled in this app) loads below the header. Use <strong>Stop bridge</strong> in the top bar when you are done (or <strong>Bridge → Stop bridge</strong> in the menu). If you reload the window (<kbd>F5</kbd>) while the bridge is still running, the app reconnects to the dashboard instead of showing only this setup screen.
+          </p>
+          <div class="cta-row">
+            <button type="button" class="btn-teal" id="btnDocs">
+              View setup instructions
+            </button>
+            <button type="button" class="btn-muted" id="btnRunNode">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                <path d="M12 2.5L7 14h3v6h2v-6h3L12 2.5zM6 16H4v3h2v-3zm14 0h-2v3h2v-3z"/>
+              </svg>
+              Run node (in-process)
+            </button>
+          </div>
+        </div>
+      </details>
+
+      <details class="card" id="detGlobal">
+        <summary>
+          <span class="summary-left">
+            Global settings
+            <span class="summary-sub">These settings apply to all Stratum instances</span>
+          </span>
+          <svg class="chev" viewBox="0 0 24 24" fill="currentColor"><path d="M7 10l5 5 5-5z"/></svg>
+        </summary>
+        <div class="card-body">
+          <div class="field">
+            <label for="config">Config file (optional)</label>
+            <input type="text" id="config" autocomplete="off" placeholder="Path to config.yaml" />
+            <p class="hint" id="configHint"></p>
+          </div>
+          <div class="field">
+            <label for="nodeMode">Node mode</label>
+            <select id="nodeMode">
+              <option value="">From config / default</option>
+              <option value="external">External kaspad (RPC)</option>
+              <option value="inprocess">In-process kaspad</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="appdir">App data directory (optional)</label>
+            <input type="text" id="appdir" autocomplete="off" placeholder="Kaspa node data dir" />
+            <p class="hint" id="appdirHint"></p>
+          </div>
+          <div class="field">
+            <label for="coinbase">Coinbase tag suffix (optional)</label>
+            <input type="text" id="coinbase" autocomplete="off" />
+          </div>
+        </div>
+      </details>
+
+      <details class="card" id="detInstances">
+        <summary>
+          <span class="summary-left">
+            Stratum instances
+            <span class="summary-sub">Kaspad process flags; use a config file for multiple Stratum ports</span>
+          </span>
+          <svg class="chev" viewBox="0 0 24 24" fill="currentColor"><path d="M7 10l5 5 5-5z"/></svg>
+        </summary>
+        <div class="card-body">
+          <div class="field">
+            <label for="kaspadArgs">Kaspad arguments (optional)</label>
+            <textarea id="kaspadArgs" placeholder="Passed after `--` for in-process kaspad, e.g.&#10;--utxoindex&#10;--rpclisten=127.0.0.1:16110"></textarea>
+            <p class="hint">One token per line or space-separated. For several Stratum listeners and per-port difficulty, define <code>instances</code> in <code>config.yaml</code>.</p>
+          </div>
+        </div>
+      </details>
+    </main>
+
+    <footer class="footer-bar">
+      <button type="button" class="btn-save" id="btnSave">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M17 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V7l-4-4zm-5 16a3 3 0 1 1 0-6 3 3 0 0 1 0 6zm3-10H5V5h10v4z"/></svg>
+        Save configuration
+      </button>
+      <button type="button" class="btn-start" id="start">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+        Start bridge
+      </button>
+    </footer>
+    <div id="err"></div>
+    </div>
+
+    <div id="view-dashboard">
+      <iframe id="dashFrame" title="Bridge operator dashboard"></iframe>
+    </div>
+  </div>
+
+  <div id="loader">
+    <p class="loader-title" id="msg">Loading…</p>
+    <p id="loaderErr" style="display:none;color:var(--err);font-size:13px;margin-top:0.75rem;"></p>
+  </div>
+  <div id="toast" role="status" aria-live="polite"></div>
+
+  <script>
+    const LS_KEY = 'rkstratumBridgeDesktopSetupV1';
+    const invoke = (cmd, args) => window.__TAURI__?.invoke?.(cmd, args);
+
+    let chromeWired = false;
+    let lastDashboardUrl;
+
+    function tickShellLocalTime() {
+      const el = document.getElementById('shellLocalTime');
+      if (!el) return;
+      try {
+        el.textContent = new Date().toLocaleString('en-US', {
+          weekday: 'short',
+          year: 'numeric',
+          month: 'short',
+          day: 'numeric',
+          hour: 'numeric',
+          minute: '2-digit',
+          second: '2-digit',
+          hour12: true,
+        });
+      } catch {
+        el.textContent = new Date().toLocaleString();
+      }
+    }
+
+    /** Header actions shared by setup and dashboard (incl. Stop bridge — requires staying on the Tauri page). */
+    function wireChrome() {
+      if (chromeWired) return;
+      chromeWired = true;
+      document.getElementById('btnLogs').addEventListener('click', () => {
+        document.getElementById('logDrawer').classList.toggle('open');
+      });
+      document.getElementById('btnRevealExe').addEventListener('click', () => {
+        invoke('reveal_exe_directory').catch((e) => alert(String(e)));
+      });
+      document.getElementById('btnStop').addEventListener('click', async () => {
+        const b = document.getElementById('btnStop');
+        b.disabled = true;
+        try {
+          await invoke('stop_bridge');
+        } catch (e) {
+          alert(String(e));
+          b.disabled = false;
+          return;
+        }
+        document.getElementById('dashFrame').src = 'about:blank';
+        document.getElementById('view-dashboard').classList.remove('is-visible');
+        document.getElementById('view-setup').classList.remove('setup-hidden');
+        document.getElementById('runningChrome').classList.remove('is-visible');
+        b.disabled = false;
+        startStatusPoll();
+      });
+    }
+
+    function parseKaspadExtra(text) {
+      const t = text.trim();
+      if (!t) return [];
+      const lines = t.split(/\r?\n/).map((l) => l.trim()).filter(Boolean);
+      if (lines.length > 1) return lines.flatMap((line) => line.split(/\s+/).filter(Boolean));
+      return t.split(/\s+/).filter(Boolean);
+    }
+
+    function collectDto() {
+      return {
+        config: document.getElementById('config').value.trim() || null,
+        testnet: document.getElementById('testnet').checked,
+        nodeMode: document.getElementById('nodeMode').value || null,
+        appdir: document.getElementById('appdir').value.trim() || null,
+        coinbaseTagSuffix: document.getElementById('coinbase').value.trim() || null,
+        kaspadExtraArgs: parseKaspadExtra(document.getElementById('kaspadArgs').value),
+      };
+    }
+
+    function applySaved() {
+      try {
+        const raw = localStorage.getItem(LS_KEY);
+        if (!raw) return;
+        const o = JSON.parse(raw);
+        if (o.config != null) document.getElementById('config').value = o.config;
+        if (typeof o.testnet === 'boolean') document.getElementById('testnet').checked = o.testnet;
+        if (o.nodeMode != null) document.getElementById('nodeMode').value = o.nodeMode;
+        if (o.appdir != null) document.getElementById('appdir').value = o.appdir;
+        if (o.coinbase != null) document.getElementById('coinbase').value = o.coinbase;
+        if (o.kaspadArgs != null) document.getElementById('kaspadArgs').value = o.kaspadArgs;
+      } catch (_) { /* ignore */ }
+    }
+
+    function saveConfiguration() {
+      const o = {
+        config: document.getElementById('config').value,
+        testnet: document.getElementById('testnet').checked,
+        nodeMode: document.getElementById('nodeMode').value,
+        appdir: document.getElementById('appdir').value,
+        coinbase: document.getElementById('coinbase').value,
+        kaspadArgs: document.getElementById('kaspadArgs').value,
+      };
+      localStorage.setItem(LS_KEY, JSON.stringify(o));
+      const t = document.getElementById('toast');
+      t.textContent = 'Configuration saved';
+      t.classList.add('show');
+      setTimeout(() => t.classList.remove('show'), 2200);
+    }
+
+    function updateStatusPills(bridgeRunning) {
+      const pillB = document.getElementById('pillBridge');
+      const pillN = document.getElementById('pillNode');
+      const txtB = document.getElementById('txtBridge');
+      const txtN = document.getElementById('txtNode');
+      if (bridgeRunning) {
+        txtB.textContent = 'Running';
+        pillB.classList.add('on');
+        txtN.textContent = 'Connected';
+        pillN.classList.add('on');
+      } else {
+        txtB.textContent = 'Stopped';
+        pillB.classList.remove('on');
+        txtN.textContent = 'Not connected';
+        pillN.classList.remove('on');
+      }
+    }
+
+    let statusTimer;
+    function startStatusPoll() {
+      if (statusTimer) clearInterval(statusTimer);
+      const tick = async () => {
+        try {
+          const on = await invoke('bridge_is_running');
+          updateStatusPills(!!on);
+        } catch (_) { /* ignore */ }
+      };
+      tick();
+      statusTimer = setInterval(tick, 1500);
+    }
+    function stopStatusPoll() {
+      if (statusTimer) clearInterval(statusTimer);
+    }
+
+    /** Vendored operator UI (`bridge-tauri/ui/dashboard/*`) + `?api=` bridge HTTP origin for JSON APIs. */
+    function dashboardEmbedSrc(dashboardHttpUrl) {
+      const origin = new URL(dashboardHttpUrl).origin;
+      return (
+        'dashboard/index.html?api=' +
+        encodeURIComponent(origin) +
+        '&embeddedChrome=1'
+      );
+    }
+
+    function showRunningDashboard(dashboardHttpUrl) {
+      lastDashboardUrl = dashboardHttpUrl;
+      document.getElementById('loader').style.display = 'none';
+      document.getElementById('shell').style.display = 'flex';
+      document.getElementById('view-setup').classList.add('setup-hidden');
+      document.getElementById('view-dashboard').classList.add('is-visible');
+      document.getElementById('runningChrome').classList.add('is-visible');
+      document.getElementById('dashFrame').src = dashboardEmbedSrc(dashboardHttpUrl);
+      wireChrome();
+      startStatusPoll();
+    }
+
+    async function connectCliMode() {
+      const msg = document.getElementById('msg');
+      const errEl = document.getElementById('loaderErr');
+      startStatusPoll();
+      let url = 'http://127.0.0.1:3030/';
+      try {
+        url = await invoke('dashboard_default_url');
+      } catch (e) {
+        errEl.style.display = 'block';
+        errEl.textContent = String(e && e.message ? e.message : e);
+        msg.textContent = 'Could not read dashboard URL.';
+        stopStatusPoll();
+        return;
+      }
+      showRunningDashboard(url);
+    }
+
+    function showErr(text) {
+      const errBox = document.getElementById('err');
+      errBox.textContent = text;
+      errBox.classList.add('show');
+    }
+    function hideErr() {
+      const errBox = document.getElementById('err');
+      errBox.classList.remove('show');
+    }
+
+    async function runGui() {
+      document.getElementById('loader').style.display = 'none';
+      document.getElementById('shell').style.display = 'flex';
+      wireChrome();
+      startStatusPoll();
+
+      const d = await invoke('gui_defaults');
+      applySaved();
+      if (d.configPath && !document.getElementById('config').value) {
+        document.getElementById('config').value = d.configPath;
+        document.getElementById('configHint').textContent =
+          'Found config.yaml next to the executable. You can change or clear this path.';
+      }
+      if (d.suggestedAppdir) {
+        const ad = document.getElementById('appdir');
+        if (!ad.value) ad.placeholder = d.suggestedAppdir;
+        document.getElementById('appdirHint').textContent =
+          'Suggested: ' + d.suggestedAppdir;
+      }
+
+      document.getElementById('btnDocs').addEventListener('click', () => {
+        invoke('open_bridge_documentation').catch((e) => alert(String(e)));
+      });
+      document.getElementById('btnRunNode').addEventListener('click', () => {
+        document.getElementById('nodeMode').value = 'inprocess';
+        document.getElementById('detGlobal').open = true;
+        document.getElementById('detInstances').open = true;
+        document.getElementById('detGlobal').scrollIntoView({ behavior: 'smooth', block: 'start' });
+      });
+      document.getElementById('btnSave').addEventListener('click', saveConfiguration);
+
+      const btn = document.getElementById('start');
+      btn.addEventListener('click', async () => {
+        hideErr();
+        btn.disabled = true;
+        const dto = collectDto();
+        try {
+          const url = await invoke('start_bridge', { dto });
+          showRunningDashboard(url);
+        } catch (e) {
+          document.getElementById('loader').style.display = 'none';
+          document.getElementById('shell').style.display = 'flex';
+          showErr(String(e && e.message ? e.message : e));
+          startStatusPoll();
+        } finally {
+          btn.disabled = false;
+        }
+      });
+    }
+
+    tickShellLocalTime();
+    setInterval(tickShellLocalTime, 1000);
+
+    (async () => {
+      const msg = document.getElementById('msg');
+      try {
+        const alreadyRunning = await invoke('bridge_is_running');
+        if (alreadyRunning) {
+          let url;
+          try {
+            url = await invoke('dashboard_default_url');
+          } catch (e) {
+            document.getElementById('loaderErr').style.display = 'block';
+            document.getElementById('loaderErr').textContent = String(e && e.message ? e.message : e);
+            msg.textContent = 'Could not read dashboard URL.';
+            return;
+          }
+          showRunningDashboard(url);
+          return;
+        }
+
+        const cli = await invoke('is_cli_mode');
+        if (cli) {
+          msg.textContent = 'Command-line mode: starting dashboard…';
+          await connectCliMode();
+        } else {
+          msg.textContent = '';
+          await runGui();
+        }
+      } catch (e) {
+        document.getElementById('loaderErr').style.display = 'block';
+        document.getElementById('loaderErr').textContent = String(e && e.message ? e.message : e);
+        msg.textContent = 'Tauri API unavailable.';
+      }
+    })();
+  </script>
+</body>
+</html>

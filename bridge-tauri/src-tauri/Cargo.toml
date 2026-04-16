@@ -1,0 +1,29 @@
+[package]
+name = "rkstratum-bridge-desktop"
+version = "0.1.0"
+description = "Desktop shell (Tauri 1.x) for the RK Stratum bridge (embedded kaspa-stratum-bridge)"
+authors = ["Kaspa developers"]
+license = "ISC"
+repository = "https://github.com/kaspanet/rusty-kaspa"
+edition = "2021"
+rust-version = "1.88.0"
+
+[build-dependencies]
+tauri-build = { version = "1.5", features = [] }
+
+[dependencies]
+# Explicit versions: tauri-build uses `cargo_toml` to merge manifests and cannot resolve
+# `workspace = true` inheritance when completing the workspace root on some Windows setups.
+serde = { version = "1.0.107", features = ["derive"] }
+serde_json = "1.0.107"
+tauri = { version = "1.5", features = ["api-all", "custom-protocol"] }
+kaspa-stratum-bridge = { path = "../../bridge", default-features = true }
+kaspa-alloc = { path = "../../utils/alloc" }
+tokio = { version = "1.33.0", features = ["rt-multi-thread", "macros"] }
+clap = { version = "4.5.35", features = ["derive"] }
+
+[features]
+default = ["custom-protocol"]
+custom-protocol = ["tauri/custom-protocol"]
+# Forward to the bridge crate so `--internal-cpu-miner` and related flags parse (optional build).
+rkstratum_cpu_miner = ["kaspa-stratum-bridge/rkstratum_cpu_miner"]

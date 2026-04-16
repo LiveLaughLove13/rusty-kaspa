@@ -48,3 +48,27 @@ pub fn bind_addr_for_operator_http(port_or_addr: &str) -> String {
     }
     if s.starts_with(':') { format!("127.0.0.1{}", s) } else { s }
 }
+
+/// Address to open in a browser or WebView for the dashboard. [`bind_addr_for_operator_http`] is still
+/// used for **listening**; this maps `0.0.0.0` to `127.0.0.1` because `http://0.0.0.0:…` is not a valid
+/// connect URL (same machine should use loopback). Other explicit hosts (e.g. LAN IP) are unchanged.
+pub fn http_connect_addr_for_operator_dashboard(bind: &str) -> String {
+    let bind = bind.trim();
+    if let Some(port_and_rest) = bind.strip_prefix("0.0.0.0:") {
+        return format!("127.0.0.1:{port_and_rest}");
+    }
+    if bind == "0.0.0.0" {
+        return "127.0.0.1".to_string();
+    }
+    bind.to_string()
+}
+
+/// Browser URL for the web dashboard (loopback for port-only config; see [`http_connect_addr_for_operator_dashboard`]).
+pub fn http_operator_dashboard_origin(port_or_addr: &str) -> Option<String> {
+    let bind = bind_addr_for_operator_http(port_or_addr);
+    if bind.is_empty() {
+        return None;
+    }
+    let connect = http_connect_addr_for_operator_dashboard(&bind);
+    Some(format!("http://{}/", connect.trim_end_matches('/')))
+}

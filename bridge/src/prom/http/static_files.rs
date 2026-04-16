@@ -1,4 +1,4 @@
-//! Embedded and on-disk static assets for the web dashboard (`/`, `/raw.html`, `/static/...`).
+//! Embedded and on-disk static assets for the web dashboard (`/`, page HTML, `/static/...`).
 
 pub(crate) fn content_type_for_path(path: &str) -> &'static str {
     let p = path.to_ascii_lowercase();
@@ -19,11 +19,16 @@ pub(crate) fn try_read_static_file(url_path: &str) -> Option<(String, Vec<u8>)> 
     // Files are vendored under bridge/static.
     // URL layout expected by the dashboard:
     // - / -> index.html
+    // - /trends.html, /blocks.html, /workers.html, /node.html (dashboard sections)
     // - /raw.html
     // - /static/... -> maps to bridge/static/... (strip leading /static/)
     let rel = match url_path {
         "/" => "index.html".to_string(),
         "/index.html" => "index.html".to_string(),
+        "/trends.html" => "trends.html".to_string(),
+        "/blocks.html" => "blocks.html".to_string(),
+        "/workers.html" => "workers.html".to_string(),
+        "/node.html" => "node.html".to_string(),
         "/raw.html" => "raw.html".to_string(),
         p if p.starts_with("/static/") => p.trim_start_matches("/static/").to_string(),
         _ => return None,

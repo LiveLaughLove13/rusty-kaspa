@@ -92,6 +92,8 @@ pub(crate) async fn handle_http_request(
     use tokio::io::AsyncWriteExt;
 
     let path = request.lines().next().and_then(|line| line.split_whitespace().nth(1)).unwrap_or("/");
+    let path = path.split('?').next().unwrap_or(path);
+    let path = path.split('#').next().unwrap_or(path);
 
     if request.starts_with("GET /metrics") {
         use prometheus::Encoder;
