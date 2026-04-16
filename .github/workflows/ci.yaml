@@ -18,24 +18,19 @@ jobs:
       - name: Install stable toolchain
         uses: dtolnay/rust-toolchain@stable
 
-      # rkstratum-bridge-desktop (Tauri 1.x) needs GTK + WebKit for Linux `cargo check --workspace`
-      # ubuntu-22.04: libwebkit2gtk-4.0-dev — ubuntu-24.04+: libwebkit2gtk-4.1-dev (4.0 may be absent)
-      # soup2-sys (webkitgtk) needs libsoup-2.4.pc → libsoup2.4-dev
+      # rkstratum-bridge-desktop (Tauri 1.x) expects the 4.0 WebKit/JSC stack.
       - name: Install Tauri / WebKit GTK dependencies (Linux)
         run: |
           set -e
           sudo apt-get update
-          if apt-cache show libwebkit2gtk-4.1-dev &>/dev/null; then
-            WEBKIT_PKG=libwebkit2gtk-4.1-dev
-          elif apt-cache show libwebkit2gtk-4.0-dev &>/dev/null; then
-            WEBKIT_PKG=libwebkit2gtk-4.0-dev
-          else
-            echo "::error::No libwebkit2gtk-*-dev package in apt cache"
+          if ! apt-cache show libwebkit2gtk-4.0-dev &>/dev/null || ! apt-cache show libjavascriptcoregtk-4.0-dev &>/dev/null; then
+            echo "::error::Tauri 1.x dependencies (libwebkit2gtk-4.0-dev + libjavascriptcoregtk-4.0-dev) are unavailable on this ubuntu-latest image."
+            echo "::error::Use ubuntu-22.04 for these jobs or upgrade the Tauri/WebKit stack to 4.1-compatible crates."
             exit 1
           fi
-          echo "Installing $WEBKIT_PKG"
           sudo apt-get install -y \
-            "$WEBKIT_PKG" \
+            libwebkit2gtk-4.0-dev \
+            libjavascriptcoregtk-4.0-dev \
             build-essential \
             curl \
             wget \
@@ -121,17 +116,14 @@ jobs:
         run: |
           set -e
           sudo apt-get update
-          if apt-cache show libwebkit2gtk-4.1-dev &>/dev/null; then
-            WEBKIT_PKG=libwebkit2gtk-4.1-dev
-          elif apt-cache show libwebkit2gtk-4.0-dev &>/dev/null; then
-            WEBKIT_PKG=libwebkit2gtk-4.0-dev
-          else
-            echo "::error::No libwebkit2gtk-*-dev package in apt cache"
+          if ! apt-cache show libwebkit2gtk-4.0-dev &>/dev/null || ! apt-cache show libjavascriptcoregtk-4.0-dev &>/dev/null; then
+            echo "::error::Tauri 1.x dependencies (libwebkit2gtk-4.0-dev + libjavascriptcoregtk-4.0-dev) are unavailable on this ubuntu-latest image."
+            echo "::error::Use ubuntu-22.04 for these jobs or upgrade the Tauri/WebKit stack to 4.1-compatible crates."
             exit 1
           fi
-          echo "Installing $WEBKIT_PKG"
           sudo apt-get install -y \
-            "$WEBKIT_PKG" \
+            libwebkit2gtk-4.0-dev \
+            libjavascriptcoregtk-4.0-dev \
             build-essential \
             curl \
             wget \
@@ -243,17 +235,14 @@ jobs:
         run: |
           set -e
           sudo apt-get update
-          if apt-cache show libwebkit2gtk-4.1-dev &>/dev/null; then
-            WEBKIT_PKG=libwebkit2gtk-4.1-dev
-          elif apt-cache show libwebkit2gtk-4.0-dev &>/dev/null; then
-            WEBKIT_PKG=libwebkit2gtk-4.0-dev
-          else
-            echo "::error::No libwebkit2gtk-*-dev package in apt cache"
+          if ! apt-cache show libwebkit2gtk-4.0-dev &>/dev/null || ! apt-cache show libjavascriptcoregtk-4.0-dev &>/dev/null; then
+            echo "::error::Tauri 1.x dependencies (libwebkit2gtk-4.0-dev + libjavascriptcoregtk-4.0-dev) are unavailable on this ubuntu-latest image."
+            echo "::error::Use ubuntu-22.04 for these jobs or upgrade the Tauri/WebKit stack to 4.1-compatible crates."
             exit 1
           fi
-          echo "Installing $WEBKIT_PKG"
           sudo apt-get install -y \
-            "$WEBKIT_PKG" \
+            libwebkit2gtk-4.0-dev \
+            libjavascriptcoregtk-4.0-dev \
             build-essential \
             curl \
             wget \
