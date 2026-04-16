@@ -21,6 +21,13 @@
       "active": false,
       "category": "DeveloperTool",
       "identifier": "io.rkstratum.bridge.desktop",
+      "icon": [
+        "icons/32x32.png",
+        "icons/128x128.png",
+        "icons/128x128@2x.png",
+        "icons/icon.icns",
+        "icons/icon.ico"
+      ],
       "longDescription": "Embedded WebView2 shell for the kaspa-stratum-bridge dashboard.",
       "shortDescription": "RK Stratum bridge dashboard",
       "targets": "all"

@@ -45,7 +45,7 @@
         <div>
           <h3 class="text-lg font-semibold kaspa-primary rk-panel-title">Trends &amp; analytics</h3>
           <p id="trendsIntroText" class="text-xs text-gray-500 mt-1 max-w-3xl leading-relaxed">
-            Long-range history tools for Prometheus/Grafana. Live charts were moved to the dedicated <strong class="text-gray-400 font-medium">Session Charts</strong> page.
+            Live charts were moved to the dedicated <strong class="text-gray-400 font-medium">Session Charts</strong> page.
           </p>
         </div>
         <div class="flex flex-wrap items-center gap-2 shrink-0">
@@ -69,9 +69,6 @@
       <div id="hostMetricsBanner" class="hidden text-xs text-gray-400 border border-card rounded-lg px-3 py-2 bg-surface-2/80 mb-4"></div>
 
       <div id="hostSection" class="hidden rk-trends-host-header mb-0">
-        <div class="rk-trends-host-header__intro">
-          <p class="text-xs text-gray-500 max-w-3xl leading-relaxed">Machine running this <code class="text-gray-300">stratum-bridge</code> process (not the remote kaspad in external mode).</p>
-        </div>
         <div class="rk-trends-host-header__grid">
           <div class="rk-trends-host-header__col space-y-2 text-sm">
             <div class="flex justify-between gap-2"><span class="text-gray-400 shrink-0">Hostname</span><span id="hostHostname" class="text-right min-w-0 break-words font-medium text-gray-100">-</span></div>
@@ -164,73 +161,7 @@
       </div>
 
       <div data-collapsible-body="trendsCharts">
-        <div id="trendsLongRangeSub" class="rk-subcollapsible mb-4 hidden">
-          <div class="flex items-center justify-between gap-2 mb-2 sm:mb-3">
-            <span class="text-xs font-semibold uppercase tracking-wide text-gray-500">Long-range history</span>
-            <button type="button" class="rk-subcollapsible-toggle bg-surface-1 border border-card px-2 py-1 rounded-lg text-xs font-medium text-white hover:border-kaspa-primary flex items-center gap-1.5 shrink-0" data-collapsible-toggle="trendsLongRangeBody" aria-expanded="true" title="Collapse or expand long-range tools">
-              <svg class="h-3.5 w-3.5 transition-transform" data-collapsible-icon="trendsLongRangeBody" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M5.23 7.21a.75.75 0 0 1 1.06.02L10 10.94l3.71-3.71a.75.75 0 1 1 1.06 1.06l-4.24 4.24a.75.75 0 0 1-1.06 0L5.21 8.29a.75.75 0 0 1 .02-1.08z" clip-rule="evenodd"/></svg>
-              <span data-collapsible-label="trendsLongRangeBody" class="hidden sm:inline">Collapse</span>
-            </button>
-          </div>
-          <div data-collapsible-body="trendsLongRangeBody">
-        <div id="trendsLongRangePanel" class="hidden mb-0 space-y-4">
-          <div class="rounded-lg border border-card/80 bg-surface-1/40 p-4 space-y-3">
-            <div>
-              <h4 class="text-sm font-semibold text-white">Use Prometheus (easiest path)</h4>
-              <p class="text-xs text-gray-500 mt-1 max-w-3xl leading-relaxed">
-                This dashboard only keeps short-lived session charts. For days or weeks of history, run <strong class="text-gray-400 font-medium">Prometheus</strong> (and optionally <strong class="text-gray-400 font-medium">Grafana</strong>) on your network and scrape the bridge below. Then use Explore or dashboards against your Prometheus—not this tab.
-              </p>
-            </div>
-            <div class="flex flex-wrap gap-2">
-              <a id="trendsLongRangeOpenMetricsLink" href="metrics" target="_blank" rel="noopener noreferrer" class="inline-flex items-center justify-center gap-1.5 bg-kaspa-primary hover:opacity-95 px-3 py-2 rounded-lg text-xs font-medium text-white">Open /metrics</a>
-              <button type="button" id="trendsLongRangeOpenPromBtn" class="bg-surface-1 border border-card px-3 py-2 rounded-lg text-xs font-medium text-white hover:border-kaspa-primary" title="Opens http://current-host:9090 (change port in your browser if Prometheus listens elsewhere)">Open local Prometheus</button>
-              <button type="button" id="trendsLongRangeCopyScrapeBtn" class="bg-surface-1 border border-card px-3 py-2 rounded-lg text-xs font-medium text-white hover:border-kaspa-primary">Copy scrape job (YAML)</button>
-              <button type="button" id="trendsLongRangeCopyTargetBtn" class="bg-surface-1 border border-card px-3 py-2 rounded-lg text-xs font-medium text-white hover:border-kaspa-primary">Copy scrape URL</button>
-            </div>
-            <div class="space-y-1.5 text-xs">
-              <span class="text-gray-500">Prometheus <span class="text-gray-400">static_configs.targets</span> should reach this URL (same host/port you use for this UI):</span>
-              <div class="font-mono text-gray-200 break-all bg-black/30 rounded px-2 py-1.5 border border-card/50" id="trendsMetricsScrapeUrlDisplay">—</div>
-            </div>
-            <details class="rk-longrange-details rounded-lg border border-card/50 bg-black/20 group">
-              <summary class="cursor-pointer text-xs font-medium text-gray-400 hover:text-gray-200 px-3 py-2.5">Example PromQL (paste into Prometheus or Grafana Explore)</summary>
-              <pre class="mx-3 mb-3 text-[11px] text-gray-300 overflow-x-auto whitespace-pre-wrap font-mono border-t border-card/40 pt-3 leading-relaxed" id="trendsLongRangePromqlExamples"># Valid shares per second by worker
-sum by (worker) (rate(ks_valid_share_counter[5m]))
-
-# Network difficulty (instant)
-ks_network_difficulty_gauge
-
-# Estimated network hashrate
-ks_estimated_network_hashrate_gauge
-
-# Blocks mined per hour (approx., counter)
-sum(rate(ks_blocks_mined[1h])) * 3600</pre>
-            </details>
-          </div>
-
-          <details class="rk-longrange-details rounded-lg border border-dashed border-card/60 bg-surface-1/25">
-            <summary class="cursor-pointer text-xs font-medium text-gray-400 hover:text-gray-200 px-3 py-2.5">Optional: embed Grafana or Prometheus in this page</summary>
-            <div class="px-3 pb-4 pt-0 space-y-3 border-t border-card/40">
-              <p class="text-xs text-gray-500 leading-relaxed max-w-4xl pt-3">
-                Some UIs block iframes (<span class="text-gray-400">X-Frame-Options</span>). If the preview is blank, use <strong class="text-gray-400 font-medium">Open tab</strong> or the buttons above. URL is stored only in this browser.
-              </p>
-              <div class="flex flex-col sm:flex-row gap-2 sm:items-center sm:flex-wrap">
-                <input id="trendsLongRangeUrl" type="url" inputmode="url" placeholder="https://grafana.example.com/d/… or http://localhost:9090/graph?…" autocomplete="off"
-                  class="flex-1 min-w-0 min-h-[2.5rem] px-3 py-2 bg-surface-1 border border-card rounded-lg text-xs text-white placeholder-gray-500 focus:outline-none focus:border-kaspa-primary font-mono" />
-                <div class="flex flex-wrap gap-2 shrink-0">
-                  <button type="button" id="trendsLongRangeSaveBtn" class="bg-kaspa-primary hover:opacity-95 px-3 py-2 rounded-lg text-xs font-medium text-white">Save &amp; load</button>
-                  <button type="button" id="trendsLongRangeOpenBtn" class="bg-surface-1 border border-card px-3 py-2 rounded-lg text-xs font-medium text-white hover:border-kaspa-primary">Open tab</button>
-                  <button type="button" id="trendsLongRangeClearUrlBtn" class="bg-surface-1 border border-card px-3 py-2 rounded-lg text-xs font-medium text-gray-400 hover:border-kaspa-primary hover:text-white">Clear URL</button>
-                </div>
-              </div>
-              <p id="trendsLongRangeIframeHint" class="hidden text-[11px] text-amber-400/90">If the frame stays blank, the site may send X-Frame-Options; use <strong class="font-medium">Open tab</strong> instead.</p>
-              <div class="rk-trends-embed-frame-wrap rounded-lg border border-card overflow-hidden bg-black/40">
-                <iframe id="trendsLongRangeIframe" class="rk-trends-embed-frame w-full border-0" title="Long-range metrics dashboard" sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-popups-to-escape-sandbox"></iframe>
-              </div>
-            </div>
-          </details>
-        </div>
-          </div>
-        </div>
+        <div id="trendsLongRangePanel" class="hidden mb-0 space-y-4"></div>
       </div>
     </div>
   </div>

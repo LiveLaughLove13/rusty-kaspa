@@ -387,8 +387,8 @@ function updateNodeDifficultyHint(stats, node) {
     hint.textContent = '';
     return;
   }
-  hint.classList.remove('hidden');
-  hint.textContent = `Top bar uses Prometheus network difficulty (${formatDifficulty(prom)}); “Difficulty (RPC)” is the node DAG value (${formatDifficulty(rpc)}). They are different sources and may differ slightly.`;
+  hint.classList.add('hidden');
+  hint.textContent = '';
 }
 
 function applyHostGeoApproxRow(geo) {
@@ -1428,7 +1428,7 @@ function applyTrendsViewMode(mode) {
   if (sessionControls) sessionControls.classList.toggle('hidden', isLong);
   if (intro) {
     intro.innerHTML = isLong
-      ? 'Connect <strong class="text-gray-400 font-medium">Prometheus</strong> for retained history, or optionally embed a dashboard URL below. Switch to <strong class="text-gray-400 font-medium">Session</strong> for live charts in this tab only.'
+      ? ''
       : 'Session: live charts (~2s refresh; cleared when this tab closes). Long range: Prometheus helpers and optional embed. Bridge status is in the <strong class="text-gray-400 font-medium">nav above</strong>; host details in <strong class="text-gray-400 font-medium">Bridge host</strong> below.';
   }
   if (longPanel) longPanel.classList.toggle('hidden', !isLong);

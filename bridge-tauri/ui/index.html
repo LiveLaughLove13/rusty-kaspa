@@ -197,6 +197,28 @@
     .log-drawer.open { display: block; }
     .log-drawer p { margin: 0 0 0.65rem; }
     .log-drawer .btn-row { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-top: 0.5rem; }
+    .log-path {
+      margin: 0.25rem 0 0.65rem;
+      font-size: 11px;
+      color: var(--muted);
+      font-family: ui-monospace, "Cascadia Code", Consolas, monospace;
+      word-break: break-all;
+    }
+    .log-stream {
+      margin-top: 0.55rem;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      background: #0b0f17;
+      max-height: 42vh;
+      overflow: auto;
+      padding: 0.6rem 0.7rem;
+      font-family: ui-monospace, "Cascadia Code", Consolas, monospace;
+      font-size: 11px;
+      line-height: 1.4;
+      color: #dbe5f4;
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
 
     /* Collapsible cards */
     main { flex: 1; display: flex; flex-direction: column; gap: 0.65rem; min-height: 0; }
@@ -250,6 +272,47 @@
     .row { display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; }
     .row input[type="checkbox"] { width: auto; }
     .hint { font-size: 12px; color: var(--muted); margin-top: 0.35rem; line-height: 1.4; }
+    .toggle-row {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 0.7rem;
+      margin-bottom: 0.85rem;
+    }
+    .toggle-field {
+      background: rgba(255, 255, 255, 0.02);
+      border: 1px solid rgba(100, 140, 180, 0.22);
+      border-radius: 10px;
+      padding: 0.55rem 0.6rem 0.6rem;
+    }
+    .toggle-label {
+      font-size: 12px;
+      color: var(--muted);
+      margin-bottom: 0.4rem;
+      display: block;
+    }
+    .toggle-segment {
+      display: inline-flex;
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      overflow: hidden;
+      background: #0f1420;
+    }
+    .toggle-segment button {
+      border: 0;
+      background: transparent;
+      color: var(--muted);
+      padding: 0.32rem 0.6rem;
+      font-size: 12px;
+      cursor: pointer;
+    }
+    .toggle-segment button + button {
+      border-left: 1px solid rgba(100, 140, 180, 0.22);
+    }
+    .toggle-segment button.is-active {
+      color: #04120f;
+      background: linear-gradient(135deg, #5eead4 0%, #14b8a6 100%);
+      font-weight: 700;
+    }
 
     .cta-row { display: flex; flex-wrap: wrap; gap: 0.65rem; margin-top: 0.5rem; }
     .btn-teal {
@@ -400,7 +463,9 @@
     </header>
 
     <div class="log-drawer" id="logDrawer">
-      <p>Bridge output is printed to the developer console when you run <code>cargo tauri dev</code>. With a release build, enable <code>log_to_file</code> in your config to capture logs on disk.</p>
+      <p>Live bridge logs (IBD/sync/progress/accepted blocks) stream below while the bridge is running.</p>
+      <div class="log-path" id="logPath">Log file: —</div>
+      <div class="log-stream" id="logStream">Waiting for log output...</div>
       <div class="btn-row">
         <button type="button" class="btn-muted" id="btnRevealExe">Open executable folder</button>
       </div>
@@ -476,6 +541,86 @@
             <label for="coinbase">Coinbase tag suffix (optional)</label>
             <input type="text" id="coinbase" autocomplete="off" />
           </div>
+          <div class="field">
+            <label for="kaspadAddress">Kaspad RPC address (optional)</label>
+            <input type="text" id="kaspadAddress" autocomplete="off" placeholder="127.0.0.1:16110" />
+          </div>
+          <div class="field">
+            <label for="webDashboardPort">Web dashboard port (optional)</label>
+            <input type="text" id="webDashboardPort" autocomplete="off" placeholder=":3030 or 0.0.0.0:3030" />
+          </div>
+          <div class="field">
+            <label for="healthCheckPort">Health check port (optional)</label>
+            <input type="text" id="healthCheckPort" autocomplete="off" placeholder=":8080" />
+          </div>
+          <div class="field">
+            <label for="blockWaitTimeMs">Block wait time (ms, optional)</label>
+            <input type="text" id="blockWaitTimeMs" autocomplete="off" placeholder="1000" />
+          </div>
+          <div class="field">
+            <label for="sharesPerMin">Shares per minute target (optional)</label>
+            <input type="text" id="sharesPerMin" autocomplete="off" placeholder="30" />
+          </div>
+          <div class="field">
+            <label for="extranonceSize">Extranonce size (optional)</label>
+            <input type="text" id="extranonceSize" autocomplete="off" placeholder="2" />
+          </div>
+          <div class="toggle-row">
+            <div class="toggle-field">
+              <span class="toggle-label">Print stats</span>
+              <input type="hidden" id="printStats" value="" />
+              <div class="toggle-segment" data-bool-target="printStats">
+                <button type="button" data-bool-value="">Default</button>
+                <button type="button" data-bool-value="true">Enable</button>
+                <button type="button" data-bool-value="false">Disable</button>
+              </div>
+            </div>
+            <div class="toggle-field">
+              <span class="toggle-label">Log to file</span>
+              <input type="hidden" id="logToFile" value="" />
+              <div class="toggle-segment" data-bool-target="logToFile">
+                <button type="button" data-bool-value="">Default</button>
+                <button type="button" data-bool-value="true">Enable</button>
+                <button type="button" data-bool-value="false">Disable</button>
+              </div>
+            </div>
+            <div class="toggle-field">
+              <span class="toggle-label">Var diff</span>
+              <input type="hidden" id="varDiff" value="" />
+              <div class="toggle-segment" data-bool-target="varDiff">
+                <button type="button" data-bool-value="">Default</button>
+                <button type="button" data-bool-value="true">Enable</button>
+                <button type="button" data-bool-value="false">Disable</button>
+              </div>
+            </div>
+            <div class="toggle-field">
+              <span class="toggle-label">Var diff stats</span>
+              <input type="hidden" id="varDiffStats" value="" />
+              <div class="toggle-segment" data-bool-target="varDiffStats">
+                <button type="button" data-bool-value="">Default</button>
+                <button type="button" data-bool-value="true">Enable</button>
+                <button type="button" data-bool-value="false">Disable</button>
+              </div>
+            </div>
+            <div class="toggle-field">
+              <span class="toggle-label">Pow2 clamp</span>
+              <input type="hidden" id="pow2Clamp" value="" />
+              <div class="toggle-segment" data-bool-target="pow2Clamp">
+                <button type="button" data-bool-value="">Default</button>
+                <button type="button" data-bool-value="true">Enable</button>
+                <button type="button" data-bool-value="false">Disable</button>
+              </div>
+            </div>
+            <div class="toggle-field">
+              <span class="toggle-label">Approximate geo lookup</span>
+              <input type="hidden" id="approximateGeoLookup" value="" />
+              <div class="toggle-segment" data-bool-target="approximateGeoLookup">
+                <button type="button" data-bool-value="">Default</button>
+                <button type="button" data-bool-value="true">Enable</button>
+                <button type="button" data-bool-value="false">Disable</button>
+              </div>
+            </div>
+          </div>
         </div>
       </details>
 
@@ -527,6 +672,9 @@
 
     let chromeWired = false;
     let lastDashboardUrl;
+    let logPollTimer = null;
+    let logCursor = 0;
+    let logPath = '';
 
     function tickShellLocalTime() {
       const el = document.getElementById('shellLocalTime');
@@ -552,7 +700,13 @@
       if (chromeWired) return;
       chromeWired = true;
       document.getElementById('btnLogs').addEventListener('click', () => {
-        document.getElementById('logDrawer').classList.toggle('open');
+        const drawer = document.getElementById('logDrawer');
+        const isOpen = drawer.classList.toggle('open');
+        if (isOpen) {
+          startLogPolling(true);
+        } else {
+          stopLogPolling();
+        }
       });
       document.getElementById('btnRevealExe').addEventListener('click', () => {
         invoke('reveal_exe_directory').catch((e) => alert(String(e)));
@@ -576,12 +730,100 @@
       });
     }
 
+    async function pollLogs(initial = false) {
+      const stream = document.getElementById('logStream');
+      const pathEl = document.getElementById('logPath');
+      if (!stream || !pathEl) return;
+      try {
+        const res = await invoke('bridge_log_tail', {
+          req: { cursor: logCursor, maxBytes: 65536 },
+        });
+        if (!res) return;
+        if (!res.path) {
+          if (initial) stream.textContent = 'No bridge log file found yet. Start bridge and wait for first log line.';
+          pathEl.textContent = 'Log file: —';
+          return;
+        }
+        if (res.path !== logPath) {
+          logPath = res.path;
+          logCursor = 0;
+          stream.textContent = '';
+        }
+        pathEl.textContent = `Log file: ${res.path}`;
+        const chunk = String(res.text || '');
+        if (chunk) {
+          stream.textContent += chunk;
+          if (stream.textContent.length > 200000) {
+            stream.textContent = stream.textContent.slice(-180000);
+          }
+          stream.scrollTop = stream.scrollHeight;
+        } else if (!stream.textContent.trim()) {
+          stream.textContent = 'Waiting for log output...';
+        }
+        logCursor = Number(res.cursor || logCursor);
+      } catch (e) {
+        if (initial) stream.textContent = `Log stream unavailable: ${String(e && e.message ? e.message : e)}`;
+      }
+    }
+
+    function startLogPolling(initial = false) {
+      if (logPollTimer) clearInterval(logPollTimer);
+      pollLogs(initial);
+      logPollTimer = setInterval(() => pollLogs(false), 1000);
+    }
+
+    function stopLogPolling() {
+      if (logPollTimer) clearInterval(logPollTimer);
+      logPollTimer = null;
+    }
+
     function parseKaspadExtra(text) {
       const t = text.trim();
       if (!t) return [];
       const lines = t.split(/\r?\n/).map((l) => l.trim()).filter(Boolean);
       if (lines.length > 1) return lines.flatMap((line) => line.split(/\s+/).filter(Boolean));
       return t.split(/\s+/).filter(Boolean);
+    }
+
+    function parseOptionalInt(raw, fieldLabel) {
+      const s = String(raw || '').trim();
+      if (!s) return null;
+      const n = Number(s);
+      if (!Number.isFinite(n) || n < 0 || !Number.isInteger(n)) {
+        throw new Error(`${fieldLabel} must be a non-negative integer`);
+      }
+      return n;
+    }
+
+    function readTriState(id) {
+      const v = (document.getElementById(id)?.value || '').trim().toLowerCase();
+      if (!v) return null;
+      if (v === 'true') return true;
+      if (v === 'false') return false;
+      return null;
+    }
+
+    function setTriState(id, value) {
+      const hidden = document.getElementById(id);
+      if (!hidden) return;
+      const normalized = value == null ? '' : (value ? 'true' : 'false');
+      hidden.value = normalized;
+      const group = document.querySelector(`.toggle-segment[data-bool-target="${id}"]`);
+      if (!group) return;
+      Array.from(group.querySelectorAll('button[data-bool-value]')).forEach((btn) => {
+        btn.classList.toggle('is-active', btn.getAttribute('data-bool-value') === normalized);
+      });
+    }
+
+    function wireBooleanToggles() {
+      document.querySelectorAll('.toggle-segment[data-bool-target]').forEach((group) => {
+        const target = group.getAttribute('data-bool-target');
+        if (!target) return;
+        group.querySelectorAll('button[data-bool-value]').forEach((btn) => {
+          btn.addEventListener('click', () => setTriState(target, btn.getAttribute('data-bool-value')));
+        });
+        setTriState(target, document.getElementById(target)?.value || '');
+      });
     }
 
     function collectDto() {
@@ -591,6 +833,18 @@
         nodeMode: document.getElementById('nodeMode').value || null,
         appdir: document.getElementById('appdir').value.trim() || null,
         coinbaseTagSuffix: document.getElementById('coinbase').value.trim() || null,
+        kaspadAddress: document.getElementById('kaspadAddress').value.trim() || null,
+        blockWaitTimeMs: parseOptionalInt(document.getElementById('blockWaitTimeMs').value, 'Block wait time'),
+        printStats: readTriState('printStats'),
+        logToFile: readTriState('logToFile'),
+        healthCheckPort: document.getElementById('healthCheckPort').value.trim() || null,
+        webDashboardPort: document.getElementById('webDashboardPort').value.trim() || null,
+        varDiff: readTriState('varDiff'),
+        sharesPerMin: parseOptionalInt(document.getElementById('sharesPerMin').value, 'Shares per minute'),
+        varDiffStats: readTriState('varDiffStats'),
+        extranonceSize: parseOptionalInt(document.getElementById('extranonceSize').value, 'Extranonce size'),
+        pow2Clamp: readTriState('pow2Clamp'),
+        approximateGeoLookup: readTriState('approximateGeoLookup'),
         kaspadExtraArgs: parseKaspadExtra(document.getElementById('kaspadArgs').value),
       };
     }
@@ -605,6 +859,18 @@
         if (o.nodeMode != null) document.getElementById('nodeMode').value = o.nodeMode;
         if (o.appdir != null) document.getElementById('appdir').value = o.appdir;
         if (o.coinbase != null) document.getElementById('coinbase').value = o.coinbase;
+        if (o.kaspadAddress != null) document.getElementById('kaspadAddress').value = o.kaspadAddress;
+        if (o.blockWaitTimeMs != null) document.getElementById('blockWaitTimeMs').value = o.blockWaitTimeMs;
+        if (o.healthCheckPort != null) document.getElementById('healthCheckPort').value = o.healthCheckPort;
+        if (o.webDashboardPort != null) document.getElementById('webDashboardPort').value = o.webDashboardPort;
+        if (o.sharesPerMin != null) document.getElementById('sharesPerMin').value = o.sharesPerMin;
+        if (o.extranonceSize != null) document.getElementById('extranonceSize').value = o.extranonceSize;
+        setTriState('printStats', o.printStats);
+        setTriState('logToFile', o.logToFile);
+        setTriState('varDiff', o.varDiff);
+        setTriState('varDiffStats', o.varDiffStats);
+        setTriState('pow2Clamp', o.pow2Clamp);
+        setTriState('approximateGeoLookup', o.approximateGeoLookup);
         if (o.kaspadArgs != null) document.getElementById('kaspadArgs').value = o.kaspadArgs;
       } catch (_) { /* ignore */ }
     }
@@ -616,6 +882,18 @@
         nodeMode: document.getElementById('nodeMode').value,
         appdir: document.getElementById('appdir').value,
         coinbase: document.getElementById('coinbase').value,
+        kaspadAddress: document.getElementById('kaspadAddress').value,
+        blockWaitTimeMs: document.getElementById('blockWaitTimeMs').value,
+        healthCheckPort: document.getElementById('healthCheckPort').value,
+        webDashboardPort: document.getElementById('webDashboardPort').value,
+        sharesPerMin: document.getElementById('sharesPerMin').value,
+        extranonceSize: document.getElementById('extranonceSize').value,
+        printStats: document.getElementById('printStats').value,
+        logToFile: document.getElementById('logToFile').value,
+        varDiff: document.getElementById('varDiff').value,
+        varDiffStats: document.getElementById('varDiffStats').value,
+        pow2Clamp: document.getElementById('pow2Clamp').value,
+        approximateGeoLookup: document.getElementById('approximateGeoLookup').value,
         kaspadArgs: document.getElementById('kaspadArgs').value,
       };
       localStorage.setItem(LS_KEY, JSON.stringify(o));
@@ -715,6 +993,7 @@
       startStatusPoll();
 
       const d = await invoke('gui_defaults');
+      wireBooleanToggles();
       applySaved();
       if (d.configPath && !document.getElementById('config').value) {
         document.getElementById('config').value = d.configPath;
@@ -743,8 +1022,8 @@
       btn.addEventListener('click', async () => {
         hideErr();
         btn.disabled = true;
-        const dto = collectDto();
         try {
+          const dto = collectDto();
           const url = await invoke('start_bridge', { dto });
           showRunningDashboard(url);
         } catch (e) {

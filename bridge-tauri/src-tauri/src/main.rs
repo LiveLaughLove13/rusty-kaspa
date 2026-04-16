@@ -4,6 +4,11 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 use std::sync::Mutex;
+use std::{
+    fs,
+    io::{Read, Seek, SeekFrom},
+    path::PathBuf,
+};
 
 use clap::Parser;
 use kaspa_alloc::init_allocator_with_default_settings;
@@ -32,6 +37,18 @@ struct StartBridgeDto {
     node_mode: Option<String>,
     appdir: Option<String>,
     coinbase_tag_suffix: Option<String>,
+    kaspad_address: Option<String>,
+    block_wait_time_ms: Option<u64>,
+    print_stats: Option<bool>,
+    log_to_file: Option<bool>,
+    health_check_port: Option<String>,
+    web_dashboard_port: Option<String>,
+    var_diff: Option<bool>,
+    shares_per_min: Option<u32>,
+    var_diff_stats: Option<bool>,
+    extranonce_size: Option<u8>,
+    pow2_clamp: Option<bool>,
+    approximate_geo_lookup: Option<bool>,
     #[serde(default)]
     kaspad_extra_args: Vec<String>,
 }
@@ -42,6 +59,67 @@ struct GuiDefaults {
     config_path: Option<String>,
     exe_directory: Option<String>,
     suggested_appdir: Option<String>,
+}
+
+#[derive(serde::Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct LogTailRequest {
+    cursor: Option<u64>,
+    max_bytes: Option<usize>,
+}
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+struct LogTailResponse {
+    cursor: u64,
+    text: String,
+    path: Option<String>,
+}
+
+fn bridge_logs_dir() -> PathBuf {
+    #[cfg(target_os = "windows")]
+    {
+        if let Some(local_app_data) = std::env::var_os("LOCALAPPDATA") {
+            return PathBuf::from(local_app_data).join("kaspa-stratum-bridge").join("logs");
+        }
+        if let Some(home) = std::env::var_os("USERPROFILE") {
+            return PathBuf::from(home).join("kaspa-stratum-bridge").join("logs");
+        }
+        PathBuf::from(".").join("kaspa-stratum-bridge").join("logs")
+    }
+    #[cfg(not(target_os = "windows"))]
+    {
+        if let Some(home) = std::env::var_os("HOME") {
+            return PathBuf::from(home).join(".kaspa-stratum-bridge").join("logs");
+        }
+        PathBuf::from(".").join(".kaspa-stratum-bridge").join("logs")
+    }
+}
+
+fn newest_bridge_log_file() -> Option<PathBuf> {
+    let dir = bridge_logs_dir();
+    let entries = fs::read_dir(dir).ok()?;
+    let mut newest: Option<(std::time::SystemTime, PathBuf)> = None;
+    for entry in entries.flatten() {
+        let path = entry.path();
+        let Some(name) = path.file_name().and_then(|n| n.to_str()) else {
+            continue;
+        };
+        if !name.starts_with("RKStratum_") || !name.ends_with(".log") {
+            continue;
+        }
+        let Ok(meta) = entry.metadata() else {
+            continue;
+        };
+        let Ok(modified) = meta.modified() else {
+            continue;
+        };
+        match &newest {
+            Some((best, _)) if *best >= modified => {}
+            _ => newest = Some((modified, path)),
+        }
+    }
+    newest.map(|(_, p)| p)
 }
 
 fn spawn_running_bridge(cli: Cli) -> Result<RunningBridge, String> {
@@ -93,6 +171,63 @@ fn cli_from_start_dto(dto: StartBridgeDto) -> Result<Cli, String> {
             args.push("--coinbase-tag-suffix".into());
             args.push(s.to_string());
         }
+    }
+    if let Some(addr) = dto.kaspad_address {
+        let addr = addr.trim();
+        if !addr.is_empty() {
+            args.push("--kaspad-address".into());
+            args.push(addr.to_string());
+        }
+    }
+    if let Some(ms) = dto.block_wait_time_ms {
+        args.push("--block-wait-time".into());
+        args.push(ms.to_string());
+    }
+    if let Some(v) = dto.print_stats {
+        args.push("--print-stats".into());
+        args.push(if v { "true" } else { "false" }.into());
+    }
+    if let Some(v) = dto.log_to_file {
+        args.push("--log-to-file".into());
+        args.push(if v { "true" } else { "false" }.into());
+    }
+    if let Some(port) = dto.health_check_port {
+        let port = port.trim();
+        if !port.is_empty() {
+            args.push("--health-check-port".into());
+            args.push(port.to_string());
+        }
+    }
+    if let Some(port) = dto.web_dashboard_port {
+        let port = port.trim();
+        if !port.is_empty() {
+            args.push("--web-dashboard-port".into());
+            args.push(port.to_string());
+        }
+    }
+    if let Some(v) = dto.var_diff {
+        args.push("--var-diff".into());
+        args.push(if v { "true" } else { "false" }.into());
+    }
+    if let Some(v) = dto.shares_per_min {
+        args.push("--shares-per-min".into());
+        args.push(v.to_string());
+    }
+    if let Some(v) = dto.var_diff_stats {
+        args.push("--var-diff-stats".into());
+        args.push(if v { "true" } else { "false" }.into());
+    }
+    if let Some(v) = dto.extranonce_size {
+        args.push("--extranonce-size".into());
+        args.push(v.to_string());
+    }
+    if let Some(v) = dto.pow2_clamp {
+        args.push("--pow2-clamp".into());
+        args.push(if v { "true" } else { "false" }.into());
+    }
+    if let Some(v) = dto.approximate_geo_lookup {
+        args.push("--approximate-geo-lookup".into());
+        args.push(if v { "true" } else { "false" }.into());
     }
     if !dto.kaspad_extra_args.is_empty() {
         args.push("--".into());
@@ -152,6 +287,30 @@ fn dashboard_default_url(state: tauri::State<AppState>) -> Result<String, String
         return Err("Bridge is not running.".into());
     };
     Ok(default_dashboard_iframe_url(&r.cli))
+}
+
+#[tauri::command]
+fn bridge_log_tail(req: LogTailRequest) -> Result<LogTailResponse, String> {
+    let Some(path) = newest_bridge_log_file() else {
+        return Ok(LogTailResponse { cursor: 0, text: String::new(), path: None });
+    };
+    let mut file = fs::File::open(&path).map_err(|e| format!("open log failed: {e}"))?;
+    let len = file.metadata().map_err(|e| format!("log metadata failed: {e}"))?.len();
+    let mut cursor = req.cursor.unwrap_or(0);
+    if cursor > len {
+        cursor = 0;
+    }
+    file.seek(SeekFrom::Start(cursor)).map_err(|e| format!("seek log failed: {e}"))?;
+    let mut buf = Vec::new();
+    file.read_to_end(&mut buf).map_err(|e| format!("read log failed: {e}"))?;
+    let max_bytes = req.max_bytes.unwrap_or(32 * 1024).clamp(1024, 256 * 1024);
+    let text = if buf.len() > max_bytes {
+        let start = buf.len() - max_bytes;
+        String::from_utf8_lossy(&buf[start..]).into_owned()
+    } else {
+        String::from_utf8_lossy(&buf).into_owned()
+    };
+    Ok(LogTailResponse { cursor: len, text, path: Some(path.to_string_lossy().into_owned()) })
 }
 
 /// Parse `http://127.0.0.1:3030/...` into a socket address for readiness checks.
@@ -254,6 +413,7 @@ fn main() {
             stop_bridge,
             bridge_is_running,
             dashboard_default_url,
+            bridge_log_tail,
             wait_for_dashboard_http,
             open_bridge_documentation,
             reveal_exe_directory,
