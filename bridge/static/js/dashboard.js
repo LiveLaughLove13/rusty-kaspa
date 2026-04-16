@@ -1400,7 +1400,7 @@ function resizeTrendCharts() {
 }
 
 function applyTrendsViewMode(mode) {
-  const isLong = mode === 'longrange';
+  let isLong = mode === 'longrange';
   const sessionBtn = document.getElementById('trendsViewSessionBtn');
   const longBtn = document.getElementById('trendsViewLongRangeBtn');
   const sessionControls = document.getElementById('trendsSessionControls');
@@ -1409,6 +1409,11 @@ function applyTrendsViewMode(mode) {
   const sessionWrap = document.getElementById('trendsSessionChartsWrap');
   const longSub = document.getElementById('trendsLongRangeSub');
   const sessionSub = document.getElementById('trendsSessionChartsSub');
+  const hasSessionUi = Boolean(sessionWrap || sessionSub || sessionBtn);
+  const hasLongRangeUi = Boolean(longPanel || longSub || longBtn);
+
+  if (isLong && !hasLongRangeUi) isLong = false;
+  if (!isLong && !hasSessionUi && hasLongRangeUi) isLong = true;
   if (sessionBtn) {
     sessionBtn.classList.toggle('rk-trends-view-btn--active', !isLong);
     sessionBtn.setAttribute('aria-pressed', !isLong ? 'true' : 'false');
@@ -2815,7 +2820,7 @@ function appendTrendSample(status) {
 }
 
 function initTrendsPanel() {
-  if (!document.getElementById('trendChartCpu')) {
+  if (!document.getElementById('trendChartCpu') && !document.getElementById('trendsLongRangePanel')) {
     return;
   }
 

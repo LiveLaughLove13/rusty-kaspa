@@ -55,6 +55,16 @@ jobs:
             sudo ln -sf "$JSCORE_PC_DIR/javascriptcoregtk-4.1.pc" /usr/local/lib/pkgconfig/javascriptcoregtk-4.0.pc
             sudo ln -sf "$WEBKIT_PC_DIR/webkit2gtk-4.1.pc" /usr/local/lib/pkgconfig/webkit2gtk-4.0.pc
             echo "PKG_CONFIG_PATH=/usr/local/lib/pkgconfig:${PKG_CONFIG_PATH}" >> "$GITHUB_ENV"
+            JSCORE_SO="$(ldconfig -p | awk '/libjavascriptcoregtk-4\\.1\\.so/{print $NF; exit}')"
+            WEBKIT_SO="$(ldconfig -p | awk '/libwebkit2gtk-4\\.1\\.so/{print $NF; exit}')"
+            if [ -n "$JSCORE_SO" ] && [ -n "$WEBKIT_SO" ]; then
+              sudo ln -sf "$JSCORE_SO" /usr/local/lib/libjavascriptcoregtk-4.0.so
+              sudo ln -sf "$WEBKIT_SO" /usr/local/lib/libwebkit2gtk-4.0.so
+              echo "LIBRARY_PATH=/usr/local/lib:${LIBRARY_PATH}" >> "$GITHUB_ENV"
+              echo "LD_LIBRARY_PATH=/usr/local/lib:${LD_LIBRARY_PATH}" >> "$GITHUB_ENV"
+            else
+              echo "::warning::Could not resolve 4.1 shared library paths via ldconfig; 4.0 linker aliases not created."
+            fi
           fi
 
       - name: Set up cache
@@ -163,6 +173,16 @@ jobs:
             sudo ln -sf "$JSCORE_PC_DIR/javascriptcoregtk-4.1.pc" /usr/local/lib/pkgconfig/javascriptcoregtk-4.0.pc
             sudo ln -sf "$WEBKIT_PC_DIR/webkit2gtk-4.1.pc" /usr/local/lib/pkgconfig/webkit2gtk-4.0.pc
             echo "PKG_CONFIG_PATH=/usr/local/lib/pkgconfig:${PKG_CONFIG_PATH}" >> "$GITHUB_ENV"
+            JSCORE_SO="$(ldconfig -p | awk '/libjavascriptcoregtk-4\\.1\\.so/{print $NF; exit}')"
+            WEBKIT_SO="$(ldconfig -p | awk '/libwebkit2gtk-4\\.1\\.so/{print $NF; exit}')"
+            if [ -n "$JSCORE_SO" ] && [ -n "$WEBKIT_SO" ]; then
+              sudo ln -sf "$JSCORE_SO" /usr/local/lib/libjavascriptcoregtk-4.0.so
+              sudo ln -sf "$WEBKIT_SO" /usr/local/lib/libwebkit2gtk-4.0.so
+              echo "LIBRARY_PATH=/usr/local/lib:${LIBRARY_PATH}" >> "$GITHUB_ENV"
+              echo "LD_LIBRARY_PATH=/usr/local/lib:${LD_LIBRARY_PATH}" >> "$GITHUB_ENV"
+            else
+              echo "::warning::Could not resolve 4.1 shared library paths via ldconfig; 4.0 linker aliases not created."
+            fi
           fi
 
       - name: Set up cache
@@ -297,6 +317,16 @@ jobs:
             sudo ln -sf "$JSCORE_PC_DIR/javascriptcoregtk-4.1.pc" /usr/local/lib/pkgconfig/javascriptcoregtk-4.0.pc
             sudo ln -sf "$WEBKIT_PC_DIR/webkit2gtk-4.1.pc" /usr/local/lib/pkgconfig/webkit2gtk-4.0.pc
             echo "PKG_CONFIG_PATH=/usr/local/lib/pkgconfig:${PKG_CONFIG_PATH}" >> "$GITHUB_ENV"
+            JSCORE_SO="$(ldconfig -p | awk '/libjavascriptcoregtk-4\\.1\\.so/{print $NF; exit}')"
+            WEBKIT_SO="$(ldconfig -p | awk '/libwebkit2gtk-4\\.1\\.so/{print $NF; exit}')"
+            if [ -n "$JSCORE_SO" ] && [ -n "$WEBKIT_SO" ]; then
+              sudo ln -sf "$JSCORE_SO" /usr/local/lib/libjavascriptcoregtk-4.0.so
+              sudo ln -sf "$WEBKIT_SO" /usr/local/lib/libwebkit2gtk-4.0.so
+              echo "LIBRARY_PATH=/usr/local/lib:${LIBRARY_PATH}" >> "$GITHUB_ENV"
+              echo "LD_LIBRARY_PATH=/usr/local/lib:${LD_LIBRARY_PATH}" >> "$GITHUB_ENV"
+            else
+              echo "::warning::Could not resolve 4.1 shared library paths via ldconfig; 4.0 linker aliases not created."
+            fi
           fi
 
       - name: Set up cache

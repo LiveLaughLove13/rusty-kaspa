@@ -22,6 +22,7 @@
             <a class="rk-dash-subnav__link" href="metrics.html">Metrics</a>
             <a class="rk-dash-subnav__link" href="node.html">Node</a>
             <a class="rk-dash-subnav__link rk-dash-subnav__link--active" href="trends.html">Trends</a>
+            <a class="rk-dash-subnav__link" href="session-charts.html">Session Charts</a>
             <a class="rk-dash-subnav__link" href="blocks.html">Blocks</a>
             <a class="rk-dash-subnav__link" href="workers.html">Workers</a>
           </nav>
@@ -44,24 +45,11 @@
         <div>
           <h3 class="text-lg font-semibold kaspa-primary rk-panel-title">Trends &amp; analytics</h3>
           <p id="trendsIntroText" class="text-xs text-gray-500 mt-1 max-w-3xl leading-relaxed">
-            Session: live charts (~2s refresh; cleared when this tab closes). Long range: Prometheus scrape helpers and optional embed. Bridge status is in the <strong class="text-gray-400 font-medium">nav above</strong>; host metrics and processes are in <strong class="text-gray-400 font-medium">Bridge host</strong> below.
+            Long-range history tools for Prometheus/Grafana. Live charts were moved to the dedicated <strong class="text-gray-400 font-medium">Session Charts</strong> page.
           </p>
         </div>
         <div class="flex flex-wrap items-center gap-2 shrink-0">
-          <div class="flex rounded-lg border border-card overflow-hidden bg-surface-1 p-0.5" role="group" aria-label="Trends data source">
-            <button type="button" id="trendsViewSessionBtn" class="rk-trends-view-btn rk-trends-view-btn--active px-2.5 py-1.5 text-xs font-medium rounded-md" aria-pressed="true">Session</button>
-            <button type="button" id="trendsViewLongRangeBtn" class="rk-trends-view-btn px-2.5 py-1.5 text-xs font-medium rounded-md" aria-pressed="false">Long range</button>
-          </div>
-          <div id="trendsSessionControls" class="flex flex-wrap items-center gap-2">
-            <label class="text-xs text-gray-400 whitespace-nowrap" for="trendsWindowSelect">Window</label>
-            <select id="trendsWindowSelect" class="bg-surface-1 border border-card px-2 py-1.5 rounded-lg text-xs text-white hover:border-kaspa-primary focus:outline-none focus:border-kaspa-primary">
-              <option value="300000">Last 5 min</option>
-              <option value="900000" selected>Last 15 min</option>
-              <option value="1800000">Last 30 min</option>
-              <option value="3600000">Last 1 h</option>
-            </select>
-            <button type="button" id="trendsClearBtn" class="bg-surface-1 border border-card px-3 py-1.5 rounded-lg text-xs font-medium text-white hover:border-kaspa-primary">Clear series</button>
-          </div>
+          <a class="bg-surface-1 border border-card px-3 py-1.5 rounded-lg text-xs font-medium text-white hover:border-kaspa-primary" href="session-charts.html">Open Session Charts</a>
           <button type="button" class="bg-surface-1 border border-card px-3 py-1.5 rounded-lg text-xs font-medium text-white hover:border-kaspa-primary flex items-center gap-2" data-collapsible-toggle="trendsCharts" aria-expanded="true">
             <svg class="h-4 w-4 transition-transform" data-collapsible-icon="trendsCharts" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M5.23 7.21a.75.75 0 0 1 1.06.02L10 10.94l3.71-3.71a.75.75 0 1 1 1.06 1.06l-4.24 4.24a.75.75 0 0 1-1.06 0L5.21 8.29a.75.75 0 0 1 .02-1.08z" clip-rule="evenodd"/></svg>
             <span data-collapsible-label="trendsCharts">Collapse</span>
@@ -240,48 +228,6 @@ sum(rate(ks_blocks_mined[1h])) * 3600</pre>
               </div>
             </div>
           </details>
-        </div>
-          </div>
-        </div>
-        <div id="trendsSessionChartsSub" class="rk-subcollapsible">
-          <div class="flex items-center justify-between gap-2 mb-2 sm:mb-3">
-            <span class="text-xs font-semibold uppercase tracking-wide text-gray-500">Session charts</span>
-            <button type="button" class="rk-subcollapsible-toggle bg-surface-1 border border-card px-2 py-1 rounded-lg text-xs font-medium text-white hover:border-kaspa-primary flex items-center gap-1.5 shrink-0" data-collapsible-toggle="trendsSessionChartsBody" aria-expanded="true" title="Collapse or expand live session charts">
-              <svg class="h-3.5 w-3.5 transition-transform" data-collapsible-icon="trendsSessionChartsBody" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M5.23 7.21a.75.75 0 0 1 1.06.02L10 10.94l3.71-3.71a.75.75 0 1 1 1.06 1.06l-4.24 4.24a.75.75 0 0 1-1.06 0L5.21 8.29a.75.75 0 0 1 .02-1.08z" clip-rule="evenodd"/></svg>
-              <span data-collapsible-label="trendsSessionChartsBody" class="hidden sm:inline">Collapse</span>
-            </button>
-          </div>
-          <div data-collapsible-body="trendsSessionChartsBody">
-        <div id="trendsSessionChartsWrap">
-        <div id="trendsChartsEmpty" class="hidden text-sm text-gray-500 border border-dashed border-card rounded-lg px-4 py-8 text-center">
-          No trend samples yet. Wait for host metrics from the bridge, or enable <code class="text-gray-300">rkstratum_host_metrics</code>.
-        </div>
-        <div id="trendsChartsGrid" class="grid grid-cols-1 lg:grid-cols-2 gap-4 lg:gap-5">
-          <div class="rk-trends-chart-card">
-            <div class="rk-trends-chart-head"><span class="rk-trends-chart-title">CPU (Bridge host)</span><span class="rk-trends-chart-stats" id="trendsStatsCpu"></span></div>
-            <div class="rk-trends-canvas-wrap"><canvas id="trendChartCpu" aria-label="CPU trend"></canvas></div>
-          </div>
-          <div class="rk-trends-chart-card">
-            <div class="rk-trends-chart-head"><span class="rk-trends-chart-title">Memory (host &amp; RSS)</span><span class="rk-trends-chart-stats" id="trendsStatsMem"></span></div>
-            <div class="rk-trends-canvas-wrap"><canvas id="trendChartMem" aria-label="Memory trend"></canvas></div>
-          </div>
-          <div class="rk-trends-chart-card">
-            <div class="rk-trends-chart-head"><span class="rk-trends-chart-title">Network (all interfaces)</span><span class="rk-trends-chart-stats" id="trendsStatsNet"></span></div>
-            <div class="rk-trends-canvas-wrap"><canvas id="trendChartNet" aria-label="Network trend"></canvas></div>
-          </div>
-          <div class="rk-trends-chart-card">
-            <div class="rk-trends-chart-head"><span class="rk-trends-chart-title">Bridge process disk I/O</span><span class="rk-trends-chart-stats" id="trendsStatsDisk"></span></div>
-            <div class="rk-trends-canvas-wrap"><canvas id="trendChartDisk" aria-label="Disk trend"></canvas></div>
-          </div>
-          <div class="rk-trends-chart-card">
-            <div class="rk-trends-chart-head"><span class="rk-trends-chart-title">Node: peers &amp; mempool</span><span class="rk-trends-chart-stats" id="trendsStatsRpc"></span></div>
-            <div class="rk-trends-canvas-wrap"><canvas id="trendChartRpc" aria-label="Peers and mempool trend"></canvas></div>
-          </div>
-          <div class="rk-trends-chart-card">
-            <div class="rk-trends-chart-head"><span class="rk-trends-chart-title">Sync &amp; data volume</span><span class="rk-trends-chart-stats" id="trendsStatsSync"></span></div>
-            <div class="rk-trends-canvas-wrap"><canvas id="trendChartSync" aria-label="Sync and volume trend"></canvas></div>
-          </div>
-        </div>
         </div>
           </div>
         </div>
