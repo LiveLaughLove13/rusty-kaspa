@@ -72,19 +72,40 @@ jobs:
             librsvg2-dev \
             patchelf
           if [ "$NEED_PC_ALIAS" = "1" ]; then
+            sudo ldconfig
             JSCORE_PC_DIR="$(pkg-config --variable pcfiledir javascriptcoregtk-4.1)"
             WEBKIT_PC_DIR="$(pkg-config --variable pcfiledir webkit2gtk-4.1)"
             sudo mkdir -p /usr/local/lib/pkgconfig
             sudo ln -sf "$JSCORE_PC_DIR/javascriptcoregtk-4.1.pc" /usr/local/lib/pkgconfig/javascriptcoregtk-4.0.pc
             sudo ln -sf "$WEBKIT_PC_DIR/webkit2gtk-4.1.pc" /usr/local/lib/pkgconfig/webkit2gtk-4.0.pc
-            echo "PKG_CONFIG_PATH=/usr/local/lib/pkgconfig:${PKG_CONFIG_PATH}" >> "$GITHUB_ENV"
-            JSCORE_SO="$(ldconfig -p | awk '/libjavascriptcoregtk-4\\.1\\.so/{print $NF; exit}')"
-            WEBKIT_SO="$(ldconfig -p | awk '/libwebkit2gtk-4\\.1\\.so/{print $NF; exit}')"
+            echo "PKG_CONFIG_PATH=/usr/local/lib/pkgconfig:${PKG_CONFIG_PATH:-}" >> "$GITHUB_ENV"
+
+            shopt -s nullglob
+            _jsc=(/usr/lib/x86_64-linux-gnu/libjavascriptcoregtk-4.1.so*)
+            _wk=(/usr/lib/x86_64-linux-gnu/libwebkit2gtk-4.1.so*)
+            shopt -u nullglob
+            JSCORE_SO=""
+            WEBKIT_SO=""
+            if [ "${#_jsc[@]}" -gt 0 ]; then JSCORE_SO="$(readlink -f "${_jsc[0]}" 2>/dev/null || printf '%s' "${_jsc[0]}")"; fi
+            if [ "${#_wk[@]}" -gt 0 ]; then WEBKIT_SO="$(readlink -f "${_wk[0]}" 2>/dev/null || printf '%s' "${_wk[0]}")"; fi
+            if [ -z "$JSCORE_SO" ]; then
+              JSCORE_SO="$(ldconfig -p 2>/dev/null | awk '/libjavascriptcoregtk-4\.1\.so/{print $NF; exit}')"
+            fi
+            if [ -z "$WEBKIT_SO" ]; then
+              WEBKIT_SO="$(ldconfig -p 2>/dev/null | awk '/libwebkit2gtk-4\.1\.so/{print $NF; exit}')"
+            fi
+
             if [ -n "$JSCORE_SO" ] && [ -n "$WEBKIT_SO" ]; then
               sudo ln -sf "$JSCORE_SO" /usr/local/lib/libjavascriptcoregtk-4.0.so
               sudo ln -sf "$WEBKIT_SO" /usr/local/lib/libwebkit2gtk-4.0.so
-              echo "LIBRARY_PATH=/usr/local/lib:${LIBRARY_PATH}" >> "$GITHUB_ENV"
-              echo "LD_LIBRARY_PATH=/usr/local/lib:${LD_LIBRARY_PATH}" >> "$GITHUB_ENV"
+              echo "LIBRARY_PATH=/usr/local/lib:${LIBRARY_PATH:-}" >> "$GITHUB_ENV"
+              echo "LD_LIBRARY_PATH=/usr/local/lib:${LD_LIBRARY_PATH:-}" >> "$GITHUB_ENV"
+              echo "RUSTFLAGS=-L/usr/local/lib ${RUSTFLAGS:-}" >> "$GITHUB_ENV"
+            else
+              echo "::error::Could not resolve WebKit/JSC 4.1 .so paths (needed for -lwebkit2gtk-4.0 / -ljavascriptcoregtk-4.0)."
+              ldconfig -p 2>/dev/null | grep -iE 'webkit|javascript' || true
+              ls -la /usr/lib/x86_64-linux-gnu/libwebkit2gtk* /usr/lib/x86_64-linux-gnu/libjavascriptcoregtk* 2>/dev/null || true
+              exit 1
             fi
           fi
 
@@ -117,6 +138,8 @@ jobs:
             unset CC_x86_64_unknown_linux_musl CXX_x86_64_unknown_linux_musl AR_x86_64_unknown_linux_musl
             unset LD_x86_64_unknown_linux_musl RANLIB_x86_64_unknown_linux_musl
             cd "$GITHUB_WORKSPACE"
+            # Host WebKit symlinks live under /usr/local/lib; subshell cleared RUSTFLAGS so restore link search.
+            export RUSTFLAGS="-L/usr/local/lib"
             cargo build --bin rkstratum-bridge-desktop --release
             cp target/release/rkstratum-bridge-desktop bin/
           )

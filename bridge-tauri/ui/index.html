@@ -41,14 +41,70 @@
       flex: 1;
       display: flex;
       flex-direction: column;
-      overflow: auto;
       min-height: 0;
-      max-width: 920px;
+      max-width: 1180px;
       width: 100%;
       margin: 0 auto;
-      padding-bottom: 0.5rem;
+      overflow: hidden;
     }
-    #view-setup main { flex: 1; }
+    /* Scroll forms here so Save / Start stay visible (no hunting with Tab). */
+    .setup-main {
+      flex: 1;
+      min-height: 0;
+      overflow-x: hidden;
+      overflow-y: auto;
+      padding: 0 0.15rem 0.5rem 0;
+      scroll-behavior: smooth;
+    }
+    .setup-section-nav {
+      flex-shrink: 0;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 0.4rem;
+      padding: 0.45rem 0 0.6rem;
+      border-bottom: 1px solid var(--border);
+    }
+    .setup-section-nav .setup-nav-hint {
+      flex: 1 1 100%;
+      font-size: 11px;
+      color: var(--muted);
+      line-height: 1.35;
+      margin: 0;
+      order: -1;
+      padding-bottom: 0.2rem;
+    }
+    @media (min-width: 720px) {
+      .setup-section-nav .setup-nav-hint {
+        flex: 1 1 auto;
+        order: 0;
+        padding-bottom: 0;
+        margin-right: 0.35rem;
+      }
+    }
+    .setup-nav-btn {
+      padding: 0.38rem 0.75rem;
+      border-radius: 999px;
+      border: 1px solid var(--border);
+      background: var(--bg-elevated);
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 500;
+      cursor: pointer;
+      font-family: inherit;
+    }
+    .setup-nav-btn:hover {
+      color: var(--text);
+      border-color: rgba(45, 212, 191, 0.35);
+    }
+    .setup-nav-btn.is-active {
+      color: #042f2e;
+      background: linear-gradient(135deg, #5eead4 0%, #14b8a6 100%);
+      border-color: rgba(45, 212, 191, 0.55);
+      font-weight: 600;
+    }
+    .setup-nav-btn[data-setup-jump="detCpu"] { display: none; }
+    .setup-nav-btn[data-setup-jump="detCpu"].is-cpu-nav-visible { display: inline-block; }
     #view-dashboard {
       display: none;
       flex: 1;
@@ -222,11 +278,45 @@
 
     /* Collapsible cards */
     main { flex: 1; display: flex; flex-direction: column; gap: 0.65rem; min-height: 0; }
+    .setup-grid {
+      display: grid;
+      gap: 0.85rem 1.1rem;
+      grid-template-columns: 1fr;
+    }
+    @media (min-width: 960px) {
+      .setup-grid { grid-template-columns: 1fr 1fr; }
+      .setup-grid .field.span-2 { grid-column: 1 / -1; }
+    }
+    .field-grid-3 {
+      display: grid;
+      gap: 0.75rem;
+      grid-template-columns: 1fr;
+    }
+    @media (min-width: 720px) {
+      .field-grid-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+    }
+    .field-grid-2 {
+      display: grid;
+      gap: 0.75rem;
+      grid-template-columns: 1fr;
+    }
+    @media (min-width: 640px) {
+      .field-grid-2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    }
+    .section-label {
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: rgba(112, 199, 186, 0.85);
+      margin: 0.35rem 0 0.15rem;
+    }
     details.card {
       border-radius: var(--radius);
       background: var(--bg-panel);
       border: 1px solid var(--border);
       overflow: hidden;
+      scroll-margin-top: 0.6rem;
     }
     details.card summary {
       list-style: none;
@@ -250,6 +340,20 @@
       flex-shrink: 0;
     }
     details.card[open] .chev { transform: rotate(180deg); }
+    /* Nav pills = one full “page”; inactive sections are removed from layout (not just collapsed). */
+    .setup-main.setup-pages-mode > details.setup-page:not(.is-setup-active) {
+      display: none !important;
+    }
+    .setup-main.setup-pages-mode > details.setup-page.is-setup-active {
+      display: block;
+    }
+    .setup-main.setup-pages-mode > details.setup-page.is-setup-active > summary {
+      cursor: default;
+      pointer-events: none;
+    }
+    .setup-main.setup-pages-mode > details.setup-page.is-setup-active .chev {
+      display: none;
+    }
     .card-body { padding: 0 1.1rem 1.1rem; border-top: 1px solid rgba(255,255,255,0.04); }
 
     label { display: block; font-size: 12px; color: var(--muted); margin-bottom: 0.35rem; }
@@ -267,51 +371,163 @@
       min-height: 5.5rem;
       font-family: ui-monospace, "Cascadia Code", Consolas, monospace;
       font-size: 12px;
+      line-height: 1.45;
       resize: vertical;
     }
+    textarea#kaspadArgs { min-height: 7rem; }
     .row { display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; }
     .row input[type="checkbox"] { width: auto; }
     .hint { font-size: 12px; color: var(--muted); margin-top: 0.35rem; line-height: 1.4; }
-    .toggle-row {
+    /* Paired columns (reference: node address + block wait with checkboxes below) */
+    .form-pairs {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-      gap: 0.7rem;
-      margin-bottom: 0.85rem;
+      gap: 1rem 1.25rem;
+      grid-template-columns: 1fr;
     }
-    .toggle-field {
-      background: rgba(255, 255, 255, 0.02);
-      border: 1px solid rgba(100, 140, 180, 0.22);
-      border-radius: 10px;
-      padding: 0.55rem 0.6rem 0.6rem;
+    @media (min-width: 720px) {
+      .form-pairs { grid-template-columns: 1fr 1fr; }
     }
-    .toggle-label {
-      font-size: 12px;
-      color: var(--muted);
-      margin-bottom: 0.4rem;
-      display: block;
+    .form-pair { display: flex; flex-direction: column; gap: 0.5rem; min-width: 0; }
+    .form-pair > label:first-of-type {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text);
+      margin-bottom: 0;
     }
-    .toggle-segment {
+    .check-line {
       display: inline-flex;
-      border: 1px solid var(--border);
-      border-radius: 999px;
-      overflow: hidden;
-      background: #0f1420;
+      align-items: center;
+      gap: 0.5rem;
+      margin-top: 0.15rem;
+      font-size: 13px;
+      color: var(--text);
+      cursor: pointer;
+      user-select: none;
     }
-    .toggle-segment button {
-      border: 0;
-      background: transparent;
-      color: var(--muted);
-      padding: 0.32rem 0.6rem;
-      font-size: 12px;
+    .check-line input[type="checkbox"] {
+      width: 1.05rem;
+      height: 1.05rem;
+      accent-color: var(--teal);
+      border-radius: 4px;
       cursor: pointer;
     }
-    .toggle-segment button + button {
-      border-left: 1px solid rgba(100, 140, 180, 0.22);
+    .check-grid {
+      display: grid;
+      gap: 0.65rem 1.25rem;
+      grid-template-columns: 1fr;
+      margin-top: 0.5rem;
     }
-    .toggle-segment button.is-active {
-      color: #04120f;
+    @media (min-width: 720px) {
+      .check-grid { grid-template-columns: 1fr 1fr; }
+    }
+    .check-grid .check-line { margin-top: 0; }
+
+    /* Stratum instance list (reference: rows + Edit / Remove) */
+    .instances-toolbar {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.65rem;
+      margin-bottom: 0.75rem;
+    }
+    .btn-add-instance {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+      padding: 0.45rem 0.95rem;
+      border-radius: 10px;
+      border: none;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      font-family: inherit;
+      color: #042f2e;
       background: linear-gradient(135deg, #5eead4 0%, #14b8a6 100%);
-      font-weight: 700;
+      box-shadow: 0 0 18px rgba(45, 212, 191, 0.25);
+    }
+    .btn-add-instance:hover { filter: brightness(1.06); }
+    .instance-list { display: flex; flex-direction: column; gap: 0.55rem; }
+    .instance-row {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 0.65rem 0.75rem;
+      align-items: start;
+      padding: 0.75rem 0.85rem;
+      border-radius: 10px;
+      border: 1px solid var(--border);
+      background: rgba(0, 0, 0, 0.22);
+    }
+    @media (max-width: 640px) {
+      .instance-row { grid-template-columns: 1fr; }
+    }
+    .instance-row-title {
+      font-weight: 600;
+      font-size: 14px;
+      color: var(--text);
+      margin-bottom: 0.35rem;
+    }
+    .instance-meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.65rem 1rem;
+      font-size: 13px;
+      color: var(--muted);
+    }
+    .instance-meta em {
+      font-style: normal;
+      font-weight: 600;
+      color: var(--teal);
+      margin-right: 0.25rem;
+    }
+    .instance-row-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.45rem;
+      justify-content: flex-end;
+    }
+    .btn-instance {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.3rem;
+      padding: 0.38rem 0.65rem;
+      border-radius: 8px;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      font-family: inherit;
+      border: 1px solid var(--border);
+      background: var(--bg-elevated);
+      color: var(--text);
+    }
+    .btn-instance--edit { border-color: rgba(251, 146, 60, 0.45); color: #fdba74; }
+    .btn-instance--edit:hover { background: rgba(251, 146, 60, 0.12); }
+    .btn-instance--remove { border-color: rgba(248, 113, 113, 0.45); color: #fca5a5; }
+    .btn-instance--remove:hover { background: rgba(248, 113, 113, 0.1); }
+    .instance-row-edit {
+      grid-column: 1 / -1;
+      display: none;
+      gap: 0.55rem;
+      padding-top: 0.5rem;
+      border-top: 1px solid rgba(255, 255, 255, 0.06);
+    }
+    .instance-row--editing .instance-row-view { display: none; }
+    .instance-row--editing .instance-row-edit { display: grid; }
+    .instance-row-edit .field { margin-bottom: 0; }
+    @media (min-width: 560px) {
+      .instance-row-edit {
+        grid-template-columns: repeat(3, minmax(0, 1fr)) auto;
+        align-items: end;
+      }
+      .instance-row-edit .instance-edit-actions { grid-column: 4; display: flex; flex-direction: column; gap: 0.35rem; }
+    }
+    .instance-empty {
+      padding: 1rem;
+      text-align: center;
+      color: var(--muted);
+      font-size: 13px;
+      border-radius: 10px;
+      border: 1px dashed rgba(100, 140, 180, 0.35);
     }
 
     .cta-row { display: flex; flex-wrap: wrap; gap: 0.65rem; margin-top: 0.5rem; }
@@ -345,16 +561,18 @@
     }
     .btn-muted:hover { border-color: rgba(148, 163, 184, 0.35); }
 
-    /* Footer */
+    /* Footer — pinned to bottom of setup view */
     .footer-bar {
+      flex-shrink: 0;
       display: flex;
       justify-content: flex-end;
       align-items: center;
       gap: 0.75rem;
       flex-wrap: wrap;
-      padding: 1.15rem 0 0;
-      margin-top: auto;
+      padding: 0.85rem 0 0.15rem;
+      margin-top: 0;
       border-top: 1px solid var(--border);
+      background: linear-gradient(180deg, rgba(12, 14, 20, 0.2) 0%, rgba(12, 14, 20, 0.92) 35%, var(--bg-deep) 100%);
     }
     .btn-save {
       display: inline-flex;
@@ -387,7 +605,8 @@
     .btn-start:disabled { opacity: 0.5; cursor: not-allowed; filter: grayscale(0.3); }
 
     #err {
-      margin-top: 0.75rem;
+      flex-shrink: 0;
+      margin-top: 0.35rem;
       padding: 0.65rem 0.85rem;
       border-radius: 8px;
       background: rgba(248, 113, 113, 0.12);
@@ -472,8 +691,17 @@
     </div>
 
     <div id="view-setup">
-    <main>
-      <details class="card" id="detStratum">
+    <nav class="setup-section-nav" aria-label="Setup sections">
+      <p class="setup-nav-hint">Each tab is its own screen; <strong>Save</strong> and <strong>Start bridge</strong> stay at the bottom.</p>
+      <button type="button" class="setup-nav-btn is-active" data-setup-jump="detStratum">Mode</button>
+      <button type="button" class="setup-nav-btn" data-setup-jump="detHow">Help</button>
+      <button type="button" class="setup-nav-btn" data-setup-jump="detGlobal">Connection</button>
+      <button type="button" class="setup-nav-btn" data-setup-jump="detInstanceDefaults">Instance defaults</button>
+      <button type="button" class="setup-nav-btn" data-setup-jump="detCpu" id="setupNavCpu">CPU miner</button>
+      <button type="button" class="setup-nav-btn" data-setup-jump="detInstances">Instances &amp; kaspad</button>
+    </nav>
+    <main class="setup-main setup-pages-mode" id="setupScroll">
+      <details class="card setup-page is-setup-active" id="detStratum" open>
         <summary>
           <span class="summary-left">Stratum mode</span>
           <svg class="chev" viewBox="0 0 24 24" fill="currentColor"><path d="M7 10l5 5 5-5z"/></svg>
@@ -487,14 +715,14 @@
         </div>
       </details>
 
-      <details class="card" id="detHow" open>
+      <details class="card setup-page" id="detHow">
         <summary>
           <span class="summary-left">How to start the Stratum bridge</span>
           <svg class="chev" viewBox="0 0 24 24" fill="currentColor"><path d="M7 10l5 5 5-5z"/></svg>
         </summary>
         <div class="card-body">
           <p class="hint" style="margin-top:0;margin-bottom:1rem">
-            Run the bridge from this app: set global options below, then click <strong>Start bridge</strong>. The operator dashboard (bundled in this app) loads below the header. Use <strong>Stop bridge</strong> in the top bar when you are done (or <strong>Bridge → Stop bridge</strong> in the menu). If you reload the window (<kbd>F5</kbd>) while the bridge is still running, the app reconnects to the dashboard instead of showing only this setup screen.
+            Run the bridge from this app: set global options on the <strong>Connection</strong> tab, then click <strong>Start bridge</strong>. The operator dashboard (bundled in this app) loads below the header. Use <strong>Stop bridge</strong> in the top bar when you are done (or <strong>Bridge → Stop bridge</strong> in the menu). If you reload the window (<kbd>F5</kbd>) while the bridge is still running, the app reconnects to the dashboard instead of showing only this setup screen.
           </p>
           <div class="cta-row">
             <button type="button" class="btn-teal" id="btnDocs">
@@ -510,20 +738,34 @@
         </div>
       </details>
 
-      <details class="card" id="detGlobal">
+      <details class="card setup-page" id="detGlobal">
         <summary>
           <span class="summary-left">
-            Global settings
+            Global Settings
             <span class="summary-sub">These settings apply to all Stratum instances</span>
           </span>
           <svg class="chev" viewBox="0 0 24 24" fill="currentColor"><path d="M7 10l5 5 5-5z"/></svg>
         </summary>
         <div class="card-body">
-          <div class="field">
+          <div class="field span-2">
             <label for="config">Config file (optional)</label>
             <input type="text" id="config" autocomplete="off" placeholder="Path to config.yaml" />
             <p class="hint" id="configHint"></p>
           </div>
+          <div class="form-pairs">
+            <div class="form-pair">
+              <label for="kaspadAddress">Kaspa node address</label>
+              <input type="text" id="kaspadAddress" autocomplete="off" placeholder="localhost:16110" />
+              <label class="check-line"><input type="checkbox" id="printStatsCb" /><span>Print statistics</span></label>
+            </div>
+            <div class="form-pair">
+              <label for="blockWaitTimeMs">Block wait time (ms)</label>
+              <input type="text" id="blockWaitTimeMs" autocomplete="off" placeholder="1000" />
+              <label class="check-line"><input type="checkbox" id="logToFileCb" /><span>Log to file</span></label>
+            </div>
+          </div>
+          <p class="hint" style="margin-top:0.35rem">Checkboxes pass <code>--flag true</code> when checked; leave unchecked to use your config file defaults (not “force false”).</p>
+          <div class="setup-grid" style="margin-top:1rem">
           <div class="field">
             <label for="nodeMode">Node mode</label>
             <select id="nodeMode">
@@ -542,20 +784,12 @@
             <input type="text" id="coinbase" autocomplete="off" />
           </div>
           <div class="field">
-            <label for="kaspadAddress">Kaspad RPC address (optional)</label>
-            <input type="text" id="kaspadAddress" autocomplete="off" placeholder="127.0.0.1:16110" />
-          </div>
-          <div class="field">
             <label for="webDashboardPort">Web dashboard port (optional)</label>
             <input type="text" id="webDashboardPort" autocomplete="off" placeholder=":3030 or 0.0.0.0:3030" />
           </div>
           <div class="field">
             <label for="healthCheckPort">Health check port (optional)</label>
             <input type="text" id="healthCheckPort" autocomplete="off" placeholder=":8080" />
-          </div>
-          <div class="field">
-            <label for="blockWaitTimeMs">Block wait time (ms, optional)</label>
-            <input type="text" id="blockWaitTimeMs" autocomplete="off" placeholder="1000" />
           </div>
           <div class="field">
             <label for="sharesPerMin">Shares per minute target (optional)</label>
@@ -565,83 +799,117 @@
             <label for="extranonceSize">Extranonce size (optional)</label>
             <input type="text" id="extranonceSize" autocomplete="off" placeholder="2" />
           </div>
-          <div class="toggle-row">
-            <div class="toggle-field">
-              <span class="toggle-label">Print stats</span>
-              <input type="hidden" id="printStats" value="" />
-              <div class="toggle-segment" data-bool-target="printStats">
-                <button type="button" data-bool-value="">Default</button>
-                <button type="button" data-bool-value="true">Enable</button>
-                <button type="button" data-bool-value="false">Disable</button>
-              </div>
+          </div>
+          <p class="section-label span-2">Single-instance CLI overrides</p>
+          <div class="field-grid-3 span-2">
+            <div class="field" style="margin-bottom:0">
+              <label for="stratumPort">Stratum listen port</label>
+              <input type="text" id="stratumPort" autocomplete="off" placeholder=":5555" />
             </div>
-            <div class="toggle-field">
-              <span class="toggle-label">Log to file</span>
-              <input type="hidden" id="logToFile" value="" />
-              <div class="toggle-segment" data-bool-target="logToFile">
-                <button type="button" data-bool-value="">Default</button>
-                <button type="button" data-bool-value="true">Enable</button>
-                <button type="button" data-bool-value="false">Disable</button>
-              </div>
+            <div class="field" style="margin-bottom:0">
+              <label for="promPort">Prometheus port</label>
+              <input type="text" id="promPort" autocomplete="off" placeholder=":2114" />
             </div>
-            <div class="toggle-field">
-              <span class="toggle-label">Var diff</span>
-              <input type="hidden" id="varDiff" value="" />
-              <div class="toggle-segment" data-bool-target="varDiff">
-                <button type="button" data-bool-value="">Default</button>
-                <button type="button" data-bool-value="true">Enable</button>
-                <button type="button" data-bool-value="false">Disable</button>
-              </div>
+            <div class="field" style="margin-bottom:0">
+              <label for="minShareDiff">Min share diff</label>
+              <input type="text" id="minShareDiff" autocomplete="off" placeholder="e.g. 8192" />
             </div>
-            <div class="toggle-field">
-              <span class="toggle-label">Var diff stats</span>
-              <input type="hidden" id="varDiffStats" value="" />
-              <div class="toggle-segment" data-bool-target="varDiffStats">
-                <button type="button" data-bool-value="">Default</button>
-                <button type="button" data-bool-value="true">Enable</button>
-                <button type="button" data-bool-value="false">Disable</button>
-              </div>
+          </div>
+          <p class="hint span-2" style="margin-top:0">For several listeners, use the <strong>Instances &amp; kaspad</strong> tab. For explicit <code>false</code> flags, use <code>config.yaml</code>.</p>
+          <p class="section-label span-2" style="margin-top:0.75rem">Optional flags (enable via checkbox)</p>
+          <div class="check-grid span-2">
+            <label class="check-line"><input type="checkbox" id="varDiffCb" /><span>Variable difficulty</span></label>
+            <label class="check-line"><input type="checkbox" id="varDiffStatsCb" /><span>Variable difficulty stats</span></label>
+            <label class="check-line"><input type="checkbox" id="pow2ClampCb" /><span>Pow2 clamp</span></label>
+            <label class="check-line"><input type="checkbox" id="approximateGeoLookupCb" /><span>Approximate geo lookup</span></label>
+          </div>
+        </div>
+      </details>
+
+      <details class="card setup-page" id="detInstanceDefaults">
+        <summary>
+          <span class="summary-left">
+            Instance CLI defaults
+            <span class="summary-sub">Optional <code>--instance-*</code> flags applied when starting extra listeners via <code>--instance</code></span>
+          </span>
+          <svg class="chev" viewBox="0 0 24 24" fill="currentColor"><path d="M7 10l5 5 5-5z"/></svg>
+        </summary>
+        <div class="card-body">
+          <div class="field-grid-2">
+            <div class="field" style="margin-bottom:0">
+              <label for="instanceSharesPerMin">Instance shares/min (optional)</label>
+              <input type="text" id="instanceSharesPerMin" autocomplete="off" placeholder="30" />
             </div>
-            <div class="toggle-field">
-              <span class="toggle-label">Pow2 clamp</span>
-              <input type="hidden" id="pow2Clamp" value="" />
-              <div class="toggle-segment" data-bool-target="pow2Clamp">
-                <button type="button" data-bool-value="">Default</button>
-                <button type="button" data-bool-value="true">Enable</button>
-                <button type="button" data-bool-value="false">Disable</button>
-              </div>
+          </div>
+          <p class="hint" style="margin-top:0.65rem">Applied as <code>--instance-*</code> when you add extra listeners on the <strong>Instances &amp; kaspad</strong> tab.</p>
+          <div class="check-grid" style="margin-top:0.65rem">
+            <label class="check-line"><input type="checkbox" id="instanceLogToFileCb" /><span>Instance log to file</span></label>
+            <label class="check-line"><input type="checkbox" id="instanceVarDiffCb" /><span>Instance variable difficulty</span></label>
+            <label class="check-line"><input type="checkbox" id="instanceVarDiffStatsCb" /><span>Instance var diff stats</span></label>
+            <label class="check-line"><input type="checkbox" id="instancePow2ClampCb" /><span>Instance pow2 clamp</span></label>
+          </div>
+        </div>
+      </details>
+
+      <details class="card setup-page" id="detCpu" style="display:none">
+        <summary>
+          <span class="summary-left">
+            Internal CPU miner
+            <span class="summary-sub">Requires desktop built with <code>rkstratum_cpu_miner</code></span>
+          </span>
+          <svg class="chev" viewBox="0 0 24 24" fill="currentColor"><path d="M7 10l5 5 5-5z"/></svg>
+        </summary>
+        <div class="card-body">
+          <div class="field row">
+            <input type="checkbox" id="internalCpuMiner" />
+            <label for="internalCpuMiner" style="margin:0">Enable internal CPU miner</label>
+          </div>
+          <div class="field-grid-2">
+            <div class="field">
+              <label for="internalCpuMinerAddress">Mining address (required if enabled)</label>
+              <input type="text" id="internalCpuMinerAddress" autocomplete="off" />
             </div>
-            <div class="toggle-field">
-              <span class="toggle-label">Approximate geo lookup</span>
-              <input type="hidden" id="approximateGeoLookup" value="" />
-              <div class="toggle-segment" data-bool-target="approximateGeoLookup">
-                <button type="button" data-bool-value="">Default</button>
-                <button type="button" data-bool-value="true">Enable</button>
-                <button type="button" data-bool-value="false">Disable</button>
-              </div>
+            <div class="field">
+              <label for="internalCpuMinerThreads">Threads (optional)</label>
+              <input type="text" id="internalCpuMinerThreads" autocomplete="off" />
+            </div>
+            <div class="field">
+              <label for="internalCpuMinerThrottleMs">Throttle ms (optional)</label>
+              <input type="text" id="internalCpuMinerThrottleMs" autocomplete="off" />
+            </div>
+            <div class="field">
+              <label for="internalCpuMinerTemplatePollMs">Template poll ms (optional)</label>
+              <input type="text" id="internalCpuMinerTemplatePollMs" autocomplete="off" />
             </div>
           </div>
         </div>
       </details>
 
-      <details class="card" id="detInstances">
+      <details class="card setup-page" id="detInstances">
         <summary>
           <span class="summary-left">
             Stratum instances
-            <span class="summary-sub">Kaspad process flags; use a config file for multiple Stratum ports</span>
+            <span class="summary-sub">Configure multiple mining ports with different difficulty settings</span>
           </span>
           <svg class="chev" viewBox="0 0 24 24" fill="currentColor"><path d="M7 10l5 5 5-5z"/></svg>
         </summary>
         <div class="card-body">
-          <div class="field">
+          <div class="instances-toolbar">
+            <p class="hint" style="margin:0;flex:1;min-width:12rem">Each row becomes one <code>--instance</code> flag (port, difficulty, Prometheus).</p>
+            <button type="button" class="btn-add-instance" id="btnAddInstance">+ Add instance</button>
+          </div>
+          <div id="instanceList" class="instance-list" aria-live="polite"></div>
+          <textarea id="instances" style="display:none" aria-hidden="true"></textarea>
+          <div class="field" style="margin-top:1rem">
             <label for="kaspadArgs">Kaspad arguments (optional)</label>
             <textarea id="kaspadArgs" placeholder="Passed after `--` for in-process kaspad, e.g.&#10;--utxoindex&#10;--rpclisten=127.0.0.1:16110"></textarea>
-            <p class="hint">One token per line or space-separated. For several Stratum listeners and per-port difficulty, define <code>instances</code> in <code>config.yaml</code>.</p>
+            <p class="hint">One token per line or space-separated. Omit if you use external kaspad only.</p>
           </div>
         </div>
       </details>
     </main>
 
+    <div id="err"></div>
     <footer class="footer-bar">
       <button type="button" class="btn-save" id="btnSave">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M17 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V7l-4-4zm-5 16a3 3 0 1 1 0-6 3 3 0 0 1 0 6zm3-10H5V5h10v4z"/></svg>
@@ -652,7 +920,6 @@
         Start bridge
       </button>
     </footer>
-    <div id="err"></div>
     </div>
 
     <div id="view-dashboard">
@@ -666,412 +933,6 @@
   </div>
   <div id="toast" role="status" aria-live="polite"></div>
 
-  <script>
-    const LS_KEY = 'rkstratumBridgeDesktopSetupV1';
-    const invoke = (cmd, args) => window.__TAURI__?.invoke?.(cmd, args);
-
-    let chromeWired = false;
-    let lastDashboardUrl;
-    let logPollTimer = null;
-    let logCursor = 0;
-    let logPath = '';
-
-    function tickShellLocalTime() {
-      const el = document.getElementById('shellLocalTime');
-      if (!el) return;
-      try {
-        el.textContent = new Date().toLocaleString('en-US', {
-          weekday: 'short',
-          year: 'numeric',
-          month: 'short',
-          day: 'numeric',
-          hour: 'numeric',
-          minute: '2-digit',
-          second: '2-digit',
-          hour12: true,
-        });
-      } catch {
-        el.textContent = new Date().toLocaleString();
-      }
-    }
-
-    /** Header actions shared by setup and dashboard (incl. Stop bridge — requires staying on the Tauri page). */
-    function wireChrome() {
-      if (chromeWired) return;
-      chromeWired = true;
-      document.getElementById('btnLogs').addEventListener('click', () => {
-        const drawer = document.getElementById('logDrawer');
-        const isOpen = drawer.classList.toggle('open');
-        if (isOpen) {
-          startLogPolling(true);
-        } else {
-          stopLogPolling();
-        }
-      });
-      document.getElementById('btnRevealExe').addEventListener('click', () => {
-        invoke('reveal_exe_directory').catch((e) => alert(String(e)));
-      });
-      document.getElementById('btnStop').addEventListener('click', async () => {
-        const b = document.getElementById('btnStop');
-        b.disabled = true;
-        try {
-          await invoke('stop_bridge');
-        } catch (e) {
-          alert(String(e));
-          b.disabled = false;
-          return;
-        }
-        document.getElementById('dashFrame').src = 'about:blank';
-        document.getElementById('view-dashboard').classList.remove('is-visible');
-        document.getElementById('view-setup').classList.remove('setup-hidden');
-        document.getElementById('runningChrome').classList.remove('is-visible');
-        b.disabled = false;
-        startStatusPoll();
-      });
-    }
-
-    async function pollLogs(initial = false) {
-      const stream = document.getElementById('logStream');
-      const pathEl = document.getElementById('logPath');
-      if (!stream || !pathEl) return;
-      try {
-        const res = await invoke('bridge_log_tail', {
-          req: { cursor: logCursor, maxBytes: 65536 },
-        });
-        if (!res) return;
-        if (!res.path) {
-          if (initial) stream.textContent = 'No bridge log file found yet. Start bridge and wait for first log line.';
-          pathEl.textContent = 'Log file: —';
-          return;
-        }
-        if (res.path !== logPath) {
-          logPath = res.path;
-          logCursor = 0;
-          stream.textContent = '';
-        }
-        pathEl.textContent = `Log file: ${res.path}`;
-        const chunk = String(res.text || '');
-        if (chunk) {
-          stream.textContent += chunk;
-          if (stream.textContent.length > 200000) {
-            stream.textContent = stream.textContent.slice(-180000);
-          }
-          stream.scrollTop = stream.scrollHeight;
-        } else if (!stream.textContent.trim()) {
-          stream.textContent = 'Waiting for log output...';
-        }
-        logCursor = Number(res.cursor || logCursor);
-      } catch (e) {
-        if (initial) stream.textContent = `Log stream unavailable: ${String(e && e.message ? e.message : e)}`;
-      }
-    }
-
-    function startLogPolling(initial = false) {
-      if (logPollTimer) clearInterval(logPollTimer);
-      pollLogs(initial);
-      logPollTimer = setInterval(() => pollLogs(false), 1000);
-    }
-
-    function stopLogPolling() {
-      if (logPollTimer) clearInterval(logPollTimer);
-      logPollTimer = null;
-    }
-
-    function parseKaspadExtra(text) {
-      const t = text.trim();
-      if (!t) return [];
-      const lines = t.split(/\r?\n/).map((l) => l.trim()).filter(Boolean);
-      if (lines.length > 1) return lines.flatMap((line) => line.split(/\s+/).filter(Boolean));
-      return t.split(/\s+/).filter(Boolean);
-    }
-
-    function parseOptionalInt(raw, fieldLabel) {
-      const s = String(raw || '').trim();
-      if (!s) return null;
-      const n = Number(s);
-      if (!Number.isFinite(n) || n < 0 || !Number.isInteger(n)) {
-        throw new Error(`${fieldLabel} must be a non-negative integer`);
-      }
-      return n;
-    }
-
-    function readTriState(id) {
-      const v = (document.getElementById(id)?.value || '').trim().toLowerCase();
-      if (!v) return null;
-      if (v === 'true') return true;
-      if (v === 'false') return false;
-      return null;
-    }
-
-    function setTriState(id, value) {
-      const hidden = document.getElementById(id);
-      if (!hidden) return;
-      const normalized = value == null ? '' : (value ? 'true' : 'false');
-      hidden.value = normalized;
-      const group = document.querySelector(`.toggle-segment[data-bool-target="${id}"]`);
-      if (!group) return;
-      Array.from(group.querySelectorAll('button[data-bool-value]')).forEach((btn) => {
-        btn.classList.toggle('is-active', btn.getAttribute('data-bool-value') === normalized);
-      });
-    }
-
-    function wireBooleanToggles() {
-      document.querySelectorAll('.toggle-segment[data-bool-target]').forEach((group) => {
-        const target = group.getAttribute('data-bool-target');
-        if (!target) return;
-        group.querySelectorAll('button[data-bool-value]').forEach((btn) => {
-          btn.addEventListener('click', () => setTriState(target, btn.getAttribute('data-bool-value')));
-        });
-        setTriState(target, document.getElementById(target)?.value || '');
-      });
-    }
-
-    function collectDto() {
-      return {
-        config: document.getElementById('config').value.trim() || null,
-        testnet: document.getElementById('testnet').checked,
-        nodeMode: document.getElementById('nodeMode').value || null,
-        appdir: document.getElementById('appdir').value.trim() || null,
-        coinbaseTagSuffix: document.getElementById('coinbase').value.trim() || null,
-        kaspadAddress: document.getElementById('kaspadAddress').value.trim() || null,
-        blockWaitTimeMs: parseOptionalInt(document.getElementById('blockWaitTimeMs').value, 'Block wait time'),
-        printStats: readTriState('printStats'),
-        logToFile: readTriState('logToFile'),
-        healthCheckPort: document.getElementById('healthCheckPort').value.trim() || null,
-        webDashboardPort: document.getElementById('webDashboardPort').value.trim() || null,
-        varDiff: readTriState('varDiff'),
-        sharesPerMin: parseOptionalInt(document.getElementById('sharesPerMin').value, 'Shares per minute'),
-        varDiffStats: readTriState('varDiffStats'),
-        extranonceSize: parseOptionalInt(document.getElementById('extranonceSize').value, 'Extranonce size'),
-        pow2Clamp: readTriState('pow2Clamp'),
-        approximateGeoLookup: readTriState('approximateGeoLookup'),
-        kaspadExtraArgs: parseKaspadExtra(document.getElementById('kaspadArgs').value),
-      };
-    }
-
-    function applySaved() {
-      try {
-        const raw = localStorage.getItem(LS_KEY);
-        if (!raw) return;
-        const o = JSON.parse(raw);
-        if (o.config != null) document.getElementById('config').value = o.config;
-        if (typeof o.testnet === 'boolean') document.getElementById('testnet').checked = o.testnet;
-        if (o.nodeMode != null) document.getElementById('nodeMode').value = o.nodeMode;
-        if (o.appdir != null) document.getElementById('appdir').value = o.appdir;
-        if (o.coinbase != null) document.getElementById('coinbase').value = o.coinbase;
-        if (o.kaspadAddress != null) document.getElementById('kaspadAddress').value = o.kaspadAddress;
-        if (o.blockWaitTimeMs != null) document.getElementById('blockWaitTimeMs').value = o.blockWaitTimeMs;
-        if (o.healthCheckPort != null) document.getElementById('healthCheckPort').value = o.healthCheckPort;
-        if (o.webDashboardPort != null) document.getElementById('webDashboardPort').value = o.webDashboardPort;
-        if (o.sharesPerMin != null) document.getElementById('sharesPerMin').value = o.sharesPerMin;
-        if (o.extranonceSize != null) document.getElementById('extranonceSize').value = o.extranonceSize;
-        setTriState('printStats', o.printStats);
-        setTriState('logToFile', o.logToFile);
-        setTriState('varDiff', o.varDiff);
-        setTriState('varDiffStats', o.varDiffStats);
-        setTriState('pow2Clamp', o.pow2Clamp);
-        setTriState('approximateGeoLookup', o.approximateGeoLookup);
-        if (o.kaspadArgs != null) document.getElementById('kaspadArgs').value = o.kaspadArgs;
-      } catch (_) { /* ignore */ }
-    }
-
-    function saveConfiguration() {
-      const o = {
-        config: document.getElementById('config').value,
-        testnet: document.getElementById('testnet').checked,
-        nodeMode: document.getElementById('nodeMode').value,
-        appdir: document.getElementById('appdir').value,
-        coinbase: document.getElementById('coinbase').value,
-        kaspadAddress: document.getElementById('kaspadAddress').value,
-        blockWaitTimeMs: document.getElementById('blockWaitTimeMs').value,
-        healthCheckPort: document.getElementById('healthCheckPort').value,
-        webDashboardPort: document.getElementById('webDashboardPort').value,
-        sharesPerMin: document.getElementById('sharesPerMin').value,
-        extranonceSize: document.getElementById('extranonceSize').value,
-        printStats: document.getElementById('printStats').value,
-        logToFile: document.getElementById('logToFile').value,
-        varDiff: document.getElementById('varDiff').value,
-        varDiffStats: document.getElementById('varDiffStats').value,
-        pow2Clamp: document.getElementById('pow2Clamp').value,
-        approximateGeoLookup: document.getElementById('approximateGeoLookup').value,
-        kaspadArgs: document.getElementById('kaspadArgs').value,
-      };
-      localStorage.setItem(LS_KEY, JSON.stringify(o));
-      const t = document.getElementById('toast');
-      t.textContent = 'Configuration saved';
-      t.classList.add('show');
-      setTimeout(() => t.classList.remove('show'), 2200);
-    }
-
-    function updateStatusPills(bridgeRunning) {
-      const pillB = document.getElementById('pillBridge');
-      const pillN = document.getElementById('pillNode');
-      const txtB = document.getElementById('txtBridge');
-      const txtN = document.getElementById('txtNode');
-      if (bridgeRunning) {
-        txtB.textContent = 'Running';
-        pillB.classList.add('on');
-        txtN.textContent = 'Connected';
-        pillN.classList.add('on');
-      } else {
-        txtB.textContent = 'Stopped';
-        pillB.classList.remove('on');
-        txtN.textContent = 'Not connected';
-        pillN.classList.remove('on');
-      }
-    }
-
-    let statusTimer;
-    function startStatusPoll() {
-      if (statusTimer) clearInterval(statusTimer);
-      const tick = async () => {
-        try {
-          const on = await invoke('bridge_is_running');
-          updateStatusPills(!!on);
-        } catch (_) { /* ignore */ }
-      };
-      tick();
-      statusTimer = setInterval(tick, 1500);
-    }
-    function stopStatusPoll() {
-      if (statusTimer) clearInterval(statusTimer);
-    }
-
-    /** Vendored operator UI (`bridge-tauri/ui/dashboard/*`) + `?api=` bridge HTTP origin for JSON APIs. */
-    function dashboardEmbedSrc(dashboardHttpUrl) {
-      const origin = new URL(dashboardHttpUrl).origin;
-      return (
-        'dashboard/index.html?api=' +
-        encodeURIComponent(origin) +
-        '&embeddedChrome=1'
-      );
-    }
-
-    function showRunningDashboard(dashboardHttpUrl) {
-      lastDashboardUrl = dashboardHttpUrl;
-      document.getElementById('loader').style.display = 'none';
-      document.getElementById('shell').style.display = 'flex';
-      document.getElementById('view-setup').classList.add('setup-hidden');
-      document.getElementById('view-dashboard').classList.add('is-visible');
-      document.getElementById('runningChrome').classList.add('is-visible');
-      document.getElementById('dashFrame').src = dashboardEmbedSrc(dashboardHttpUrl);
-      wireChrome();
-      startStatusPoll();
-    }
-
-    async function connectCliMode() {
-      const msg = document.getElementById('msg');
-      const errEl = document.getElementById('loaderErr');
-      startStatusPoll();
-      let url = 'http://127.0.0.1:3030/';
-      try {
-        url = await invoke('dashboard_default_url');
-      } catch (e) {
-        errEl.style.display = 'block';
-        errEl.textContent = String(e && e.message ? e.message : e);
-        msg.textContent = 'Could not read dashboard URL.';
-        stopStatusPoll();
-        return;
-      }
-      showRunningDashboard(url);
-    }
-
-    function showErr(text) {
-      const errBox = document.getElementById('err');
-      errBox.textContent = text;
-      errBox.classList.add('show');
-    }
-    function hideErr() {
-      const errBox = document.getElementById('err');
-      errBox.classList.remove('show');
-    }
-
-    async function runGui() {
-      document.getElementById('loader').style.display = 'none';
-      document.getElementById('shell').style.display = 'flex';
-      wireChrome();
-      startStatusPoll();
-
-      const d = await invoke('gui_defaults');
-      wireBooleanToggles();
-      applySaved();
-      if (d.configPath && !document.getElementById('config').value) {
-        document.getElementById('config').value = d.configPath;
-        document.getElementById('configHint').textContent =
-          'Found config.yaml next to the executable. You can change or clear this path.';
-      }
-      if (d.suggestedAppdir) {
-        const ad = document.getElementById('appdir');
-        if (!ad.value) ad.placeholder = d.suggestedAppdir;
-        document.getElementById('appdirHint').textContent =
-          'Suggested: ' + d.suggestedAppdir;
-      }
-
-      document.getElementById('btnDocs').addEventListener('click', () => {
-        invoke('open_bridge_documentation').catch((e) => alert(String(e)));
-      });
-      document.getElementById('btnRunNode').addEventListener('click', () => {
-        document.getElementById('nodeMode').value = 'inprocess';
-        document.getElementById('detGlobal').open = true;
-        document.getElementById('detInstances').open = true;
-        document.getElementById('detGlobal').scrollIntoView({ behavior: 'smooth', block: 'start' });
-      });
-      document.getElementById('btnSave').addEventListener('click', saveConfiguration);
-
-      const btn = document.getElementById('start');
-      btn.addEventListener('click', async () => {
-        hideErr();
-        btn.disabled = true;
-        try {
-          const dto = collectDto();
-          const url = await invoke('start_bridge', { dto });
-          showRunningDashboard(url);
-        } catch (e) {
-          document.getElementById('loader').style.display = 'none';
-          document.getElementById('shell').style.display = 'flex';
-          showErr(String(e && e.message ? e.message : e));
-          startStatusPoll();
-        } finally {
-          btn.disabled = false;
-        }
-      });
-    }
-
-    tickShellLocalTime();
-    setInterval(tickShellLocalTime, 1000);
-
-    (async () => {
-      const msg = document.getElementById('msg');
-      try {
-        const alreadyRunning = await invoke('bridge_is_running');
-        if (alreadyRunning) {
-          let url;
-          try {
-            url = await invoke('dashboard_default_url');
-          } catch (e) {
-            document.getElementById('loaderErr').style.display = 'block';
-            document.getElementById('loaderErr').textContent = String(e && e.message ? e.message : e);
-            msg.textContent = 'Could not read dashboard URL.';
-            return;
-          }
-          showRunningDashboard(url);
-          return;
-        }
-
-        const cli = await invoke('is_cli_mode');
-        if (cli) {
-          msg.textContent = 'Command-line mode: starting dashboard…';
-          await connectCliMode();
-        } else {
-          msg.textContent = '';
-          await runGui();
-        }
-      } catch (e) {
-        document.getElementById('loaderErr').style.display = 'block';
-        document.getElementById('loaderErr').textContent = String(e && e.message ? e.message : e);
-        msg.textContent = 'Tauri API unavailable.';
-      }
-    })();
-  </script>
+  <script src="js/setup.js" defer></script>
 </body>
 </html>

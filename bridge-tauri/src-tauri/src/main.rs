@@ -49,6 +49,27 @@ struct StartBridgeDto {
     extranonce_size: Option<u8>,
     pow2_clamp: Option<bool>,
     approximate_geo_lookup: Option<bool>,
+    stratum_port: Option<String>,
+    min_share_diff: Option<u32>,
+    prom_port: Option<String>,
+    #[serde(default)]
+    instances: Vec<String>,
+    instance_log_to_file: Option<bool>,
+    instance_var_diff: Option<bool>,
+    instance_shares_per_min: Option<u32>,
+    instance_var_diff_stats: Option<bool>,
+    instance_pow2_clamp: Option<bool>,
+    #[serde(default)]
+    #[cfg_attr(not(feature = "rkstratum_cpu_miner"), allow(dead_code))]
+    internal_cpu_miner: bool,
+    #[cfg_attr(not(feature = "rkstratum_cpu_miner"), allow(dead_code))]
+    internal_cpu_miner_address: Option<String>,
+    #[cfg_attr(not(feature = "rkstratum_cpu_miner"), allow(dead_code))]
+    internal_cpu_miner_threads: Option<usize>,
+    #[cfg_attr(not(feature = "rkstratum_cpu_miner"), allow(dead_code))]
+    internal_cpu_miner_throttle_ms: Option<u64>,
+    #[cfg_attr(not(feature = "rkstratum_cpu_miner"), allow(dead_code))]
+    internal_cpu_miner_template_poll_ms: Option<u64>,
     #[serde(default)]
     kaspad_extra_args: Vec<String>,
 }
@@ -229,6 +250,79 @@ fn cli_from_start_dto(dto: StartBridgeDto) -> Result<Cli, String> {
         args.push("--approximate-geo-lookup".into());
         args.push(if v { "true" } else { "false" }.into());
     }
+    if let Some(port) = dto.stratum_port {
+        let port = port.trim();
+        if !port.is_empty() {
+            args.push("--stratum-port".into());
+            args.push(port.to_string());
+        }
+    }
+    if let Some(d) = dto.min_share_diff {
+        args.push("--min-share-diff".into());
+        args.push(d.to_string());
+    }
+    if let Some(port) = dto.prom_port {
+        let port = port.trim();
+        if !port.is_empty() {
+            args.push("--prom-port".into());
+            args.push(port.to_string());
+        }
+    }
+    for spec in dto.instances {
+        let spec = spec.trim();
+        if spec.is_empty() {
+            continue;
+        }
+        args.push("--instance".into());
+        args.push(spec.to_string());
+    }
+    if let Some(v) = dto.instance_log_to_file {
+        args.push("--instance-log-to-file".into());
+        args.push(if v { "true" } else { "false" }.into());
+    }
+    if let Some(v) = dto.instance_var_diff {
+        args.push("--instance-var-diff".into());
+        args.push(if v { "true" } else { "false" }.into());
+    }
+    if let Some(v) = dto.instance_shares_per_min {
+        args.push("--instance-shares-per-min".into());
+        args.push(v.to_string());
+    }
+    if let Some(v) = dto.instance_var_diff_stats {
+        args.push("--instance-var-diff-stats".into());
+        args.push(if v { "true" } else { "false" }.into());
+    }
+    if let Some(v) = dto.instance_pow2_clamp {
+        args.push("--instance-pow2-clamp".into());
+        args.push(if v { "true" } else { "false" }.into());
+    }
+
+    #[cfg(feature = "rkstratum_cpu_miner")]
+    {
+        if dto.internal_cpu_miner {
+            args.push("--internal-cpu-miner".into());
+        }
+        if let Some(s) = dto.internal_cpu_miner_address {
+            let s = s.trim();
+            if !s.is_empty() {
+                args.push("--internal-cpu-miner-address".into());
+                args.push(s.to_string());
+            }
+        }
+        if let Some(n) = dto.internal_cpu_miner_threads {
+            args.push("--internal-cpu-miner-threads".into());
+            args.push(n.to_string());
+        }
+        if let Some(ms) = dto.internal_cpu_miner_throttle_ms {
+            args.push("--internal-cpu-miner-throttle-ms".into());
+            args.push(ms.to_string());
+        }
+        if let Some(ms) = dto.internal_cpu_miner_template_poll_ms {
+            args.push("--internal-cpu-miner-template-poll-ms".into());
+            args.push(ms.to_string());
+        }
+    }
+
     if !dto.kaspad_extra_args.is_empty() {
         args.push("--".into());
         args.extend(dto.kaspad_extra_args);
@@ -242,12 +336,17 @@ fn is_cli_mode() -> bool {
 }
 
 #[tauri::command]
+fn cpu_miner_feature_enabled() -> bool {
+    cfg!(feature = "rkstratum_cpu_miner")
+}
+
+#[tauri::command]
 fn gui_defaults() -> GuiDefaults {
     let exe = std::env::current_exe().ok();
     let exe_directory = exe.as_ref().and_then(|p| p.parent()).map(|p| p.to_string_lossy().into_owned());
     let beside = exe.as_ref().and_then(|p| p.parent()).map(|d| d.join("config.yaml")).filter(|p| p.is_file());
     let config_path = beside.as_ref().map(|p| p.to_string_lossy().into_owned());
-    let suggested_appdir = exe_directory.as_ref().map(|d| format!("{d}\\kaspa-data"));
+    let suggested_appdir = exe.as_ref().and_then(|p| p.parent()).map(|d| d.join("kaspa-data").to_string_lossy().into_owned());
     GuiDefaults { config_path, exe_directory, suggested_appdir }
 }
 
@@ -408,6 +507,7 @@ fn main() {
         .manage(state)
         .invoke_handler(tauri::generate_handler![
             is_cli_mode,
+            cpu_miner_feature_enabled,
             gui_defaults,
             start_bridge,
             stop_bridge,
