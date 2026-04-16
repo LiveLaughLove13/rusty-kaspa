@@ -110,18 +110,10 @@ fn is_cli_mode() -> bool {
 fn gui_defaults() -> GuiDefaults {
     let exe = std::env::current_exe().ok();
     let exe_directory = exe.as_ref().and_then(|p| p.parent()).map(|p| p.to_string_lossy().into_owned());
-    let beside = exe
-        .as_ref()
-        .and_then(|p| p.parent())
-        .map(|d| d.join("config.yaml"))
-        .filter(|p| p.is_file());
+    let beside = exe.as_ref().and_then(|p| p.parent()).map(|d| d.join("config.yaml")).filter(|p| p.is_file());
     let config_path = beside.as_ref().map(|p| p.to_string_lossy().into_owned());
     let suggested_appdir = exe_directory.as_ref().map(|d| format!("{d}\\kaspa-data"));
-    GuiDefaults {
-        config_path,
-        exe_directory,
-        suggested_appdir,
-    }
+    GuiDefaults { config_path, exe_directory, suggested_appdir }
 }
 
 #[tauri::command]
@@ -144,10 +136,7 @@ fn stop_bridge(state: tauri::State<AppState>) -> Result<(), String> {
         return Err("Bridge is not running.".into());
     };
     request_bridge_shutdown();
-    running
-        .join
-        .join()
-        .map_err(|_| "Bridge thread panicked while stopping.".to_string())?;
+    running.join.join().map_err(|_| "Bridge thread panicked while stopping.".to_string())?;
     Ok(())
 }
 
@@ -168,15 +157,8 @@ fn dashboard_default_url(state: tauri::State<AppState>) -> Result<String, String
 /// Parse `http://127.0.0.1:3030/...` into a socket address for readiness checks.
 fn dashboard_socket_addr(url: &str) -> Result<std::net::SocketAddr, String> {
     let u = url.trim();
-    let rest = u
-        .strip_prefix("http://")
-        .or_else(|| u.strip_prefix("https://"))
-        .ok_or("URL must start with http:// or https://")?;
-    let authority = rest
-        .split(&['/', '?', '#'][..])
-        .next()
-        .filter(|s| !s.is_empty())
-        .ok_or("missing host in dashboard URL")?;
+    let rest = u.strip_prefix("http://").or_else(|| u.strip_prefix("https://")).ok_or("URL must start with http:// or https://")?;
+    let authority = rest.split(&['/', '?', '#'][..]).next().filter(|s| !s.is_empty()).ok_or("missing host in dashboard URL")?;
     authority.parse().map_err(|e| format!("invalid host:port in URL: {e}"))
 }
 
@@ -193,10 +175,7 @@ fn reveal_exe_directory() -> Result<(), String> {
     let dir = std::env::current_exe().map_err(|e| e.to_string())?;
     let dir = dir.parent().ok_or_else(|| "executable has no parent directory".to_string())?;
     if cfg!(windows) {
-        std::process::Command::new("explorer")
-            .arg(dir.as_os_str())
-            .spawn()
-            .map_err(|e| e.to_string())?;
+        std::process::Command::new("explorer").arg(dir.as_os_str()).spawn().map_err(|e| e.to_string())?;
     } else if cfg!(target_os = "macos") {
         std::process::Command::new("open").arg(dir).spawn().map_err(|e| e.to_string())?;
     } else {
@@ -207,11 +186,7 @@ fn reveal_exe_directory() -> Result<(), String> {
 
 fn open_os_url(url: &str) -> Result<(), String> {
     if cfg!(windows) {
-        std::process::Command::new("cmd")
-            .args(["/C", "start", ""])
-            .arg(url)
-            .spawn()
-            .map_err(|e| e.to_string())?;
+        std::process::Command::new("cmd").args(["/C", "start", ""]).arg(url).spawn().map_err(|e| e.to_string())?;
     } else if cfg!(target_os = "macos") {
         std::process::Command::new("open").arg(url).spawn().map_err(|e| e.to_string())?;
     } else {
@@ -228,9 +203,7 @@ async fn wait_for_dashboard_http(url: String) -> Result<(), String> {
             Ok(_) => return Ok(()),
             Err(e) => {
                 if attempt == 119 {
-                    return Err(format!(
-                        "Dashboard not reachable at {url} after 60s: {e}. Check web_dashboard_port and logs."
-                    ));
+                    return Err(format!("Dashboard not reachable at {url} after 60s: {e}. Check web_dashboard_port and logs."));
                 }
                 tokio::time::sleep(std::time::Duration::from_millis(500)).await;
             }
@@ -268,9 +241,7 @@ fn main() {
 
     let menu = Menu::new().add_submenu(Submenu::new(
         "Bridge",
-        Menu::new()
-            .add_item(CustomMenuItem::new("stop_bridge", "Stop bridge"))
-            .add_native_item(tauri::MenuItem::Quit),
+        Menu::new().add_item(CustomMenuItem::new("stop_bridge", "Stop bridge")).add_native_item(tauri::MenuItem::Quit),
     ));
 
     tauri::Builder::default()

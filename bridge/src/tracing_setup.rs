@@ -6,9 +6,9 @@ use std::sync::Mutex as StdMutex;
 use tracing_subscriber::fmt::format::{FormatEvent, FormatFields, Writer};
 use tracing_subscriber::{EnvFilter, layer::SubscriberExt};
 
+use crate::BridgeConfig;
 use crate::app_dirs;
 use crate::log_colors::LogColors;
-use crate::BridgeConfig;
 
 // Global registry mapping instance_id strings to instance numbers
 // This persists across async boundaries and thread switches

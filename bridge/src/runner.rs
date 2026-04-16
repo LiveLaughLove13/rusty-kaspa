@@ -6,8 +6,8 @@ use crate::health_check;
 use crate::inprocess_node::{self, InProcessNode};
 use crate::tracing_setup;
 use crate::{
-    BridgeConfig, KaspaApi, StratumServerBridgeConfig as StratumBridgeConfig, listen_and_serve_with_shutdown, log_colors::LogColors, net_utils,
-    prom,
+    BridgeConfig, KaspaApi, StratumServerBridgeConfig as StratumBridgeConfig, listen_and_serve_with_shutdown, log_colors::LogColors,
+    net_utils, prom,
 };
 use futures_util::future::try_join_all;
 use kaspad_lib::args as kaspad_args;
@@ -74,10 +74,7 @@ unsafe extern "system" fn console_ctrl_handler(ctrl_type: u32) -> i32 {
     state.last_event_ms.store(now_ms, Ordering::SeqCst);
 
     let prev = state.presses.fetch_add(1, Ordering::SeqCst);
-    if prev == 0 {
-        let _ = state.shutdown_tx.send(true);
-        1
-    } else if bridge_embedded() {
+    if prev == 0 || bridge_embedded() {
         let _ = state.shutdown_tx.send(true);
         1
     } else {
@@ -136,10 +133,10 @@ pub fn default_dashboard_iframe_url(cli: &Cli) -> String {
         let Ok(content) = std::fs::read_to_string(&path) else { continue };
         let Ok(cfg) = BridgeConfig::from_yaml(&content) else { continue };
         let w = cfg.global.web_dashboard_port.trim();
-        if !w.is_empty() {
-            if let Some(u) = net_utils::http_operator_dashboard_origin(w) {
-                return u;
-            }
+        if !w.is_empty()
+            && let Some(u) = net_utils::http_operator_dashboard_origin(w)
+        {
+            return u;
         }
         break;
     }
@@ -154,8 +151,8 @@ fn load_initial_config() -> Result<BridgeConfig, anyhow::Error> {
     let mut config: Option<BridgeConfig> = None;
     for path in candidates.iter() {
         if path.exists() {
-            let content = std::fs::read_to_string(path)
-                .map_err(|e| anyhow::anyhow!("Failed to read config file {}: {}", path.display(), e))?;
+            let content =
+                std::fs::read_to_string(path).map_err(|e| anyhow::anyhow!("Failed to read config file {}: {}", path.display(), e))?;
 
             let parsed = BridgeConfig::from_yaml(&content)
                 .map_err(|e| anyhow::anyhow!("Failed to parse config file {}: {}", path.display(), e))?;
@@ -346,13 +343,7 @@ pub async fn run(cli: Cli) -> Result<(), anyhow::Error> {
             let throttle = cli.internal_cpu_miner_throttle_ms.map(Duration::from_millis);
             let template_poll_interval = Duration::from_millis(cli.internal_cpu_miner_template_poll_ms.unwrap_or(250));
 
-            let cfg = crate::InternalCpuMinerConfig {
-                enabled: true,
-                mining_address,
-                threads,
-                throttle,
-                template_poll_interval,
-            };
+            let cfg = crate::InternalCpuMinerConfig { enabled: true, mining_address, threads, throttle, template_poll_interval };
 
             tracing::info!(
                 "[InternalMiner] enabled: threads={}, throttle_ms={:?}, template_poll_ms={}",
@@ -402,12 +393,7 @@ pub async fn run(cli: Cli) -> Result<(), anyhow::Error> {
                         // Hashrate as GH/s
                         let hashrate_ghs = (dh as f64 / dt) / 1e9;
 
-                        crate::prom::record_internal_cpu_miner_snapshot(
-                            hashes_tried,
-                            blocks_submitted,
-                            blocks_accepted,
-                            hashrate_ghs,
-                        );
+                        crate::prom::record_internal_cpu_miner_snapshot(hashes_tried, blocks_submitted, blocks_accepted, hashrate_ghs);
                     }
                 });
             }
@@ -543,7 +529,7 @@ pub async fn run(cli: Cli) -> Result<(), anyhow::Error> {
                 if let Err(e) = res {
                     tracing::warn!("Shutdown completed with error: {e}");
                 }
-                return Ok(());
+                Ok(())
             }
 
             #[cfg(windows)]
@@ -563,7 +549,7 @@ pub async fn run(cli: Cli) -> Result<(), anyhow::Error> {
                 if let Err(e) = res {
                     tracing::warn!("Shutdown completed with error: {e}");
                 }
-                return Ok(());
+                Ok(())
             }
         }
     }

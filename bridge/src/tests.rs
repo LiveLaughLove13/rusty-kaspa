@@ -23,9 +23,9 @@
 // ============================================================================
 
 #[cfg(test)]
-use crate::cli::{parse_bool, parse_instance_spec};
-#[cfg(test)]
 use crate::BridgeConfig;
+#[cfg(test)]
+use crate::cli::{parse_bool, parse_instance_spec};
 
 #[cfg(test)]
 #[test]
@@ -511,10 +511,7 @@ fn test_http_operator_dashboard_origin_maps_unspecified_to_loopback_for_browser(
     use crate::net_utils::http_operator_dashboard_origin;
     assert_eq!(http_operator_dashboard_origin("0.0.0.0:3030").as_deref(), Some("http://127.0.0.1:3030/"));
     assert_eq!(http_operator_dashboard_origin(":3030").as_deref(), Some("http://127.0.0.1:3030/"));
-    assert_eq!(
-        http_operator_dashboard_origin("192.168.1.10:3030").as_deref(),
-        Some("http://192.168.1.10:3030/")
-    );
+    assert_eq!(http_operator_dashboard_origin("192.168.1.10:3030").as_deref(), Some("http://192.168.1.10:3030/"));
 }
 
 // JSON-RPC event tests
@@ -772,9 +769,9 @@ fn test_mining_state_job_management() {
     // Test: Job storage and retrieval in MiningState
     // This verifies that jobs can be added to the mining state and retrieved by their job ID.
     // Jobs are stored in a circular buffer with a maximum of 300 jobs.
+    use crate::mining_state::{Job, MiningState};
     use kaspa_consensus_core::block::Block;
     use kaspa_hashes::Hash;
-    use crate::mining_state::{Job, MiningState};
 
     let state = MiningState::new();
 
@@ -1058,8 +1055,8 @@ fn test_parse_instance_spec_multiple_ports() {
 
 #[cfg(test)]
 mod integration {
-    use kaspa_alloc::init_allocator_with_default_settings;
     use crate::{KaspaApi, StratumServerBridgeConfig as StratumBridgeConfig, listen_and_serve_with_shutdown};
+    use kaspa_alloc::init_allocator_with_default_settings;
     use kaspad_lib::args as kaspad_args;
     use std::ffi::OsString;
     use std::time::Duration;
@@ -1168,11 +1165,6 @@ mod integration {
 
 #[cfg(test)]
 mod comprehensive_tests {
-    use kaspa_consensus_core::block::Block;
-    use kaspa_consensus_core::header::Header;
-    use kaspa_consensus_core::subnets::SubnetworkId;
-    use kaspa_consensus_core::tx::{ScriptPublicKey, Transaction, TransactionOutput};
-    use kaspa_hashes::Hash;
     use crate::{
         client_handler::ClientHandler,
         default_client::{handle_authorize, handle_subscribe},
@@ -1182,6 +1174,11 @@ mod comprehensive_tests {
         share_handler::ShareHandler,
         stratum_context::StratumContext,
     };
+    use kaspa_consensus_core::block::Block;
+    use kaspa_consensus_core::header::Header;
+    use kaspa_consensus_core::subnets::SubnetworkId;
+    use kaspa_consensus_core::tx::{ScriptPublicKey, Transaction, TransactionOutput};
+    use kaspa_hashes::Hash;
     use num_bigint::BigUint;
     use num_traits::Zero;
     use serde_json::json;

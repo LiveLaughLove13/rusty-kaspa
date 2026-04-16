@@ -74,8 +74,8 @@ pub mod app_dirs;
 pub mod cli;
 pub mod health_check;
 pub mod inprocess_node;
-pub mod tracing_setup;
 pub mod runner;
+pub mod tracing_setup;
 
 #[cfg(test)]
 mod tests;
