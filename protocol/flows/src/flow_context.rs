@@ -3,7 +3,7 @@ use crate::flowcontext::{
     process_queue::ProcessQueue,
     transactions::TransactionsSpread,
 };
-use crate::{v7, v8};
+use crate::{v7, v8, v9};
 use async_trait::async_trait;
 use futures::future::join_all;
 use kaspa_addressmanager::AddressManager;
@@ -538,7 +538,7 @@ impl FlowContext {
         blocks.sort_by(|a, b| a.0.header.blue_work.partial_cmp(&b.0.header.blue_work).unwrap());
         // Use a ProcessQueue so we get rid of duplicates
         let mut transactions_to_broadcast = ProcessQueue::new();
-        for (block, virtual_state_task) in ancestor_batch.zip().chain(once((block, virtual_state_task))).chain(blocks.into_iter()) {
+        for (block, virtual_state_task) in ancestor_batch.zip().chain(once((block, virtual_state_task))).chain(blocks) {
             // We only care about waiting for virtual to process the block at this point, before proceeding with post-processing
             // actions such as updating the mempool. We know this will not err since `block_task` already completed w/o error
             let _ = virtual_state_task.await;
@@ -739,7 +739,7 @@ impl ConnectionInitializer for FlowContext {
 
         // Register all flows according to version
         let (flows, applied_protocol_version) = match peer_version.protocol_version {
-            v if v >= PROTOCOL_VERSION => (v8::register(self.clone(), router.clone(), PROTOCOL_VERSION), PROTOCOL_VERSION),
+            v if v >= PROTOCOL_VERSION => (v9::register(self.clone(), router.clone(), PROTOCOL_VERSION), PROTOCOL_VERSION),
             8 => (v8::register(self.clone(), router.clone(), 8), 8),
             7 => (v7::register(self.clone(), router.clone()), 7),
             v => return Err(ProtocolError::VersionMismatch(PROTOCOL_VERSION, v)),

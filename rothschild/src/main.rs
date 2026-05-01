@@ -5,12 +5,15 @@ use itertools::Itertools;
 use kaspa_addresses::{Address, Prefix, Version};
 use kaspa_consensus_core::{
     config::params::{TESTNET_PARAMS, TESTNET12_PARAMS},
-    constants::{SOMPI_PER_KASPA, TX_VERSION, TX_VERSION_POST_COV_HF},
+    constants::{SOMPI_PER_KASPA, TX_VERSION, TX_VERSION_TOCCATA},
     hashing::covenant_id::covenant_id,
     network::NetworkType,
     sign::sign,
     subnets::SUBNETWORK_ID_NATIVE,
-    tx::{CovenantBinding, MutableTransaction, Transaction, TransactionInput, TransactionOutpoint, TransactionOutput, UtxoEntry},
+    tx::{
+        CovenantBinding, MutableTransaction, Transaction, TransactionInput, TransactionOutpoint, TransactionOutput, TxInputMass,
+        UtxoEntry,
+    },
 };
 use kaspa_core::{info, kaspad_env::version, time::unix_now, warn};
 use kaspa_grpc_client::{ClientPool, GrpcClient};
@@ -623,12 +626,17 @@ fn generate_tx(
     let script_public_key = pay_to_address_script(kaspa_addr);
     let inputs = utxos
         .iter()
-        .map(|(op, _)| TransactionInput { previous_outpoint: *op, signature_script: vec![], sequence: 0, sig_op_count: 1 })
+        .map(|(op, _)| TransactionInput {
+            previous_outpoint: *op,
+            signature_script: vec![],
+            sequence: 0,
+            mass: if with_covenant_id { TxInputMass::ComputeBudget(10.into()) } else { TxInputMass::SigopCount(1.into()) },
+        })
         .collect_vec();
 
     // set base version according to the usage of covenant
     let mut tx_version = match with_covenant_id {
-        true => TX_VERSION_POST_COV_HF,
+        true => TX_VERSION_TOCCATA,
         false => TX_VERSION,
     };
 
@@ -646,7 +654,7 @@ fn generate_tx(
 
     let unsigned_tx = Transaction::new_non_finalized(tx_version, inputs, outputs, 0, SUBNETWORK_ID_NATIVE, 0, data);
     let mut unsigned_tx = MutableTransaction::with_entries(unsigned_tx, utxos.iter().map(|(_, entry)| entry.clone()).collect_vec());
-    if tx_version == TX_VERSION_POST_COV_HF {
+    if tx_version == TX_VERSION_TOCCATA {
         apply_random_covenant_binding_from_inputs(&mut unsigned_tx, with_covenant_id);
     }
     let signed_tx = sign(unsigned_tx, schnorr_key);

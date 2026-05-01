@@ -12,8 +12,8 @@ pub enum TxRuleError {
     #[error("transaction has duplicate inputs")]
     TxDuplicateInputs,
 
-    #[error("transaction has non zero gas value")]
-    TxHasGas,
+    #[error("transaction has non-zero gas: {0}")]
+    TxHasGas(&'static str),
 
     #[error("transaction version {0} is unknown")]
     UnknownTxVersion(u16),
@@ -60,7 +60,7 @@ pub enum TxRuleError {
     #[error("transaction output {0} has zero value")]
     TxOutZero(usize),
 
-    #[error("transaction output {0} value is higher than the max allowed of {}", MAX_SOMPI)]
+    #[error("transaction output {0} value is higher than the max allowed of {max_sompi}", max_sompi = MAX_SOMPI)]
     TxOutTooHigh(usize),
 
     #[error("transaction total outputs value overflowed u64")]
@@ -101,8 +101,14 @@ pub enum TxRuleError {
     #[error("fee rate per contextual mass gram is not greater than the fee rate of the replaced transaction")]
     FeerateTooLow,
 
-    #[error("transaction output #{0} has covenant field but transaction version is below 1")]
-    CovenantBindingInPreCovTxVersion(usize),
+    #[error("transaction output #{0} has covenant field but transaction version is 0")]
+    CovenantBindingInV0(usize),
+
+    #[error("transaction input #{0} has a sig op count field with value {1} in version 1 transaction")]
+    SigopCountInV1(usize, u8),
+
+    #[error("transaction input #{0} has a compute budget field with value {1} in version 0 transaction")]
+    ComputeBudgetInV0(usize, u16),
 
     #[error("covenants error: {0}")]
     CovenantsError(#[from] CovenantsError),

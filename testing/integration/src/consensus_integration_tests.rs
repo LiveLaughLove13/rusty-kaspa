@@ -15,7 +15,7 @@ use kaspa_consensus::model::stores::headers::HeaderStoreReader;
 use kaspa_consensus::model::stores::reachability::DbReachabilityStore;
 use kaspa_consensus::model::stores::relations::DbRelationsStore;
 use kaspa_consensus::model::stores::selected_chain::SelectedChainStoreReader;
-use kaspa_consensus::params::{DEVNET_PARAMS, ForkActivation, MAINNET_PARAMS, OverrideParams};
+use kaspa_consensus::params::{DEVNET_PARAMS, ForkActivation, MAINNET_PARAMS, OverrideParams, TESTNET12_PARAMS};
 use kaspa_consensus::pipeline::ProcessingCounters;
 use kaspa_consensus::pipeline::monitor::ConsensusMonitor;
 use kaspa_consensus::processes::reachability::tests::{DagBlock, DagBuilder, StoreValidationExtensions};
@@ -28,10 +28,13 @@ use kaspa_consensus_core::blockstatus::BlockStatus;
 use kaspa_consensus_core::coinbase::MinerData;
 use kaspa_consensus_core::constants::{BLOCK_VERSION, SOMPI_PER_KASPA, TRANSIENT_BYTE_TO_MASS_FACTOR};
 use kaspa_consensus_core::errors::block::{BlockProcessResult, RuleError};
+use kaspa_consensus_core::errors::tx::TxRuleError;
 use kaspa_consensus_core::hashing;
 use kaspa_consensus_core::header::Header;
+use kaspa_consensus_core::mass::BlockMassLimits;
 use kaspa_consensus_core::merkle::calc_hash_merkle_root;
 use kaspa_consensus_core::mining_rules::MiningRules;
+use kaspa_consensus_core::sign::sign;
 use kaspa_consensus_core::subnets::{SUBNETWORK_ID_NATIVE, SubnetworkId};
 use kaspa_consensus_core::tx::{
     MutableTransaction, ScriptPublicKey, Transaction, TransactionInput, TransactionOutpoint, TransactionOutput, UtxoEntry,
@@ -42,8 +45,13 @@ use kaspa_consensusmanager::ConsensusManager;
 use kaspa_core::task::tick::TickService;
 use kaspa_core::time::unix_now;
 use kaspa_database::utils::get_kaspa_tempdir;
-use kaspa_hashes::Hash;
+use kaspa_hashes::{Hash, SeqCommitActiveNode};
 use kaspa_rpc_core::RpcHeader;
+use kaspa_seq_commit::hashing::{
+    activity_digest_lane, activity_leaf, lane_key, lane_tip_next, mergeset_context_hash, seq_commit_timestamp, smt_leaf_hash,
+};
+use kaspa_seq_commit::types::{LaneTipInput, MergesetContext, SmtLeafInput};
+use kaspa_seq_commit::verify::{SmtMetadata, verify_smt_metadata};
 use kaspa_txscript::{MAX_SCRIPT_ELEMENT_SIZE, pay_to_script_hash_script};
 use kaspa_utils::arc::ArcExtensions;
 
@@ -54,6 +62,12 @@ use futures_util::future::try_join_all;
 use itertools::Itertools;
 use kaspa_consensus_core::hashing::sighash::calc_schnorr_signature_hash;
 use kaspa_consensus_core::muhash::MuHashExtensions;
+use kaspa_consensus_core::{
+    constants::TX_VERSION_TOCCATA,
+    hashing::sighash::SigHashReusedValuesUnsync,
+    mass::ComputeBudget,
+    tx::{PopulatedTransaction, TransactionId},
+};
 use kaspa_core::core::Core;
 use kaspa_core::signals::Shutdown;
 use kaspa_core::task::runtime::AsyncRuntime;
@@ -67,6 +81,14 @@ use kaspa_notify::subscription::context::SubscriptionContext;
 use kaspa_txscript::caches::TxScriptCacheCounters;
 use kaspa_txscript::opcodes::codes::{Op0, OpCat, OpDrop, OpEqual, OpTrue, OpTxOutputSpk};
 use kaspa_txscript::script_builder::{ScriptBuilder, ScriptBuilderResult};
+use kaspa_txscript::{
+    EngineCtx, EngineFlags, TxScriptEngine,
+    caches::Cache,
+    opcodes::codes::OpZkPrecompile,
+    pay_to_script_hash_signature_script,
+    zk_precompiles::{tags::ZkTag, tests::helpers::load_stark_fields},
+};
+use kaspa_txscript_errors::TxScriptError;
 use kaspa_utxoindex::UtxoIndex;
 use kaspa_utxoindex::api::{UtxoIndexApi, UtxoIndexProxy};
 use serde::{Deserialize, Serialize};
@@ -1363,6 +1385,100 @@ fn selected_chain_store_iterator(consensus: &TestConsensus, pruning_point: Hash)
         .take_while(move |&h| h != pruning_point)
 }
 
+// Minimal KIP-21 proof check for these activation tests: mine the virtual view into
+// a chain block, reconstruct the target lane activity, and verify its SMT proof.
+struct ChainSeqCommitLaneActivity {
+    lane_key: Hash,
+    activity_leaves: Vec<Hash>,
+    contains_tx: bool,
+}
+
+fn chain_seq_commit_lane_activity_for_tx(
+    consensus: &TestConsensus,
+    accepting_block: Hash,
+    tx: &Transaction,
+) -> ChainSeqCommitLaneActivity {
+    let target_id = tx.id();
+    let target_lane = *tx.subnetwork_id.as_bytes();
+    let mut activity_leaves = Vec::new();
+    let mut contains_tx = false;
+    let mut merge_idx = 0u32;
+
+    for block_acceptance in consensus.get_block_acceptance_data(accepting_block).unwrap().iter() {
+        let block_transactions = consensus.get_block_body(block_acceptance.block_hash).unwrap();
+        for accepted in block_acceptance.accepted_transactions.iter() {
+            let accepted_tx = &block_transactions[accepted.index_within_block as usize];
+            assert_eq!(accepted_tx.id(), accepted.transaction_id);
+            let lane_id = *accepted_tx.subnetwork_id.as_bytes();
+            if lane_id == target_lane {
+                activity_leaves.push(activity_leaf(&accepted.transaction_id, accepted_tx.version, merge_idx));
+            }
+            if accepted.transaction_id == target_id {
+                contains_tx = true;
+            }
+            merge_idx += 1;
+        }
+    }
+
+    ChainSeqCommitLaneActivity { lane_key: lane_key(&target_lane), activity_leaves, contains_tx }
+}
+
+fn chain_seq_commit_context_hash(consensus: &TestConsensus, accepting_block: Hash) -> Hash {
+    let header = consensus.get_header(accepting_block).unwrap();
+    let parent_header = consensus.get_header(header.direct_parents()[0]).unwrap();
+    mergeset_context_hash(&MergesetContext {
+        timestamp: seq_commit_timestamp(parent_header.timestamp),
+        daa_score: header.daa_score,
+        blue_score: header.blue_score,
+    })
+}
+
+fn assert_chain_seq_commit_lane(consensus: &TestConsensus, accepting_block: Hash, activity: &ChainSeqCommitLaneActivity) {
+    let proof = consensus.seq_commit_lane_proof(accepting_block, activity.lane_key);
+    verify_smt_metadata(
+        &SmtMetadata {
+            lanes_root: &proof.lanes_root,
+            payload_and_ctx_digest: &proof.payload_and_ctx_digest,
+            parent_seq_commit: &proof.parent_seq_commit,
+        },
+        proof.expected_seq_commit,
+        proof.parent_seq_commit,
+    )
+    .unwrap();
+
+    let leaf = if activity.activity_leaves.is_empty() {
+        proof.current_lane.map(|(lane_tip, blue_score)| smt_leaf_hash(&SmtLeafInput { lane_tip: &lane_tip, blue_score }))
+    } else {
+        let parent_ref = proof.parent_lane_tip.unwrap_or(proof.parent_seq_commit);
+        let activity_digest = activity_digest_lane(activity.activity_leaves.iter().copied());
+        let context_hash = chain_seq_commit_context_hash(consensus, accepting_block);
+        let lane_tip = lane_tip_next(&LaneTipInput {
+            parent_ref: &parent_ref,
+            lane_key: &activity.lane_key,
+            activity_digest: &activity_digest,
+            context_hash: &context_hash,
+        });
+        let (stored_tip, stored_blue_score) = proof.current_lane.expect("accepted lane activity must have a persisted SMT lane");
+        assert_eq!(stored_tip, lane_tip);
+        assert_eq!(stored_blue_score, proof.blue_score);
+        Some(smt_leaf_hash(&SmtLeafInput { lane_tip: &lane_tip, blue_score: stored_blue_score }))
+    };
+
+    assert!(proof.smt_proof.verify::<SeqCommitActiveNode>(&activity.lane_key, leaf, proof.lanes_root).unwrap());
+}
+
+fn assert_tx_in_chain_seq_commit(consensus: &TestConsensus, accepting_block: Hash, tx: &Transaction) {
+    let activity = chain_seq_commit_lane_activity_for_tx(consensus, accepting_block, tx);
+    assert!(activity.contains_tx, "tx {} is missing from chain seq-commit activity input", tx.id());
+    assert_chain_seq_commit_lane(consensus, accepting_block, &activity);
+}
+
+fn assert_tx_not_in_chain_seq_commit(consensus: &TestConsensus, accepting_block: Hash, tx: &Transaction) {
+    let activity = chain_seq_commit_lane_activity_for_tx(consensus, accepting_block, tx);
+    assert!(!activity.contains_tx, "tx {} unexpectedly appears in chain seq-commit activity input", tx.id());
+    assert_chain_seq_commit_lane(consensus, accepting_block, &activity);
+}
+
 #[tokio::test]
 async fn staging_consensus_test() {
     init_allocator_with_default_settings();
@@ -1493,7 +1609,7 @@ async fn kip10_test() {
     // Verify the transaction with KIP-10 opcodes is accepted
     let status = consensus.add_utxo_valid_block_with_parents((index + 1).into(), vec![config.genesis.hash], vec![tx.clone()]).await;
     assert!(matches!(status, Ok(BlockStatus::StatusUTXOValid)));
-    assert!(consensus.lkg_virtual_state.load().accepted_tx_digests.contains(&tx_id)); // covenants not enabled yet, so accepted_tx_digests contains txid
+    assert!(consensus.lkg_virtual_state.load().accepted_id_digests.contains(&tx_id)); // covenants not enabled yet, so accepted_id_digests contains txid
 }
 
 #[tokio::test]
@@ -1598,11 +1714,21 @@ async fn covenants_activation_test() {
     next_id += 1;
 
     // Post-activation: same transaction should now be accepted
-    let status = consensus.add_utxo_valid_block_with_parents(next_id.into(), vec![tip], vec![tx.clone()]).await;
-    assert!(matches!(status, Ok(BlockStatus::StatusUTXOValid)));
+    let tx_block_hash = next_id.into();
+    let status = consensus.add_utxo_valid_block_with_parents(tx_block_hash, vec![tip], vec![tx.clone()]).await;
+    assert!(matches!(status, Ok(BlockStatus::StatusUTXOValid)), "status = {:?}", status);
+    tip = tx_block_hash;
+    next_id += 1;
 
-    let digest = tx.seq_commit_digest();
-    assert!(consensus.lkg_virtual_state.load().accepted_tx_digests.contains(&digest));
+    // Mine virtual so seqcommit data is available in the SMT stores.
+    let accepting_block = next_id.into();
+    let status = consensus.add_utxo_valid_block_with_parents(accepting_block, vec![tip], vec![]).await;
+    assert!(matches!(status, Ok(BlockStatus::StatusUTXOValid)), "status = {:?}", status);
+    // Use the persisted SMT stores to verify tx inclusion in the seqcommit.
+    assert_tx_in_chain_seq_commit(&consensus, accepting_block, &tx);
+
+    // Post-KIP21: accepted_id_digests[0] = seq_commit (not individual tx digests)
+    assert_eq!(consensus.lkg_virtual_state.load().accepted_id_digests.len(), 1);
 
     consensus.shutdown(wait_handles);
 }
@@ -1695,29 +1821,41 @@ async fn push_limit_activation_test() {
             vec![],
         );
         tx.finalize();
-        let seq_commit_digest = tx.seq_commit_digest();
         let mut tx = MutableTransaction::from_tx(tx);
         // This triggers storage mass population
         let _ = consensus.validate_mempool_transaction(&mut tx, &TransactionValidationArgs::default());
         let tx = tx.tx.unwrap_or_clone();
 
         let miner_data = MinerData::new(ScriptPublicKey::from_vec(0, vec![]), vec![]);
-        let mut block = consensus.build_utxo_valid_block_with_parents(next_id.into(), vec![tip], miner_data.clone(), vec![]);
+        let tx_block_hash = next_id.into();
+        let mut block = consensus.build_utxo_valid_block_with_parents(tx_block_hash, vec![tip], miner_data.clone(), vec![]);
 
         block.transactions.push(tx.clone());
         block.header.hash_merkle_root = calc_hash_merkle_root(block.transactions.iter());
-
         let block_status = consensus.validate_and_insert_block(block.to_immutable()).virtual_state_task.await;
         assert!(matches!(block_status, Ok(BlockStatus::StatusUTXOValid)));
-        assert!(consensus.lkg_virtual_state.load().accepted_tx_digests.contains(&seq_commit_digest)); // virtual block has daa where digests are not equal to tx_ids
+        tip = tx_block_hash;
+        next_id += 1;
+
+        // Mine virtual so seqcommit data is available in the SMT stores.
+        let accepting_block = next_id.into();
+        let block_status = consensus.add_utxo_valid_block_with_parents(accepting_block, vec![tip], vec![]).await;
+        assert!(matches!(block_status, Ok(BlockStatus::StatusUTXOValid)));
+        // Use the persisted SMT stores to verify tx inclusion in the seqcommit.
+        assert_tx_in_chain_seq_commit(&consensus, accepting_block, &tx);
+        tip = accepting_block;
+        next_id += 1;
+
+        let vs = consensus.lkg_virtual_state.load();
+        assert_eq!(vs.accepted_id_digests.len(), 1);
     }
 
-    next_id += 1;
-
     // Advance to activation
-    consensus.add_utxo_valid_block_with_parents(next_id.into(), vec![tip], vec![]).await.unwrap();
-    tip = next_id.into();
-    next_id += 1;
+    while consensus.get_virtual_daa_score() < ACTIVATION_DAA_SCORE {
+        consensus.add_utxo_valid_block_with_parents(next_id.into(), vec![tip], vec![]).await.unwrap();
+        tip = next_id.into();
+        next_id += 1;
+    }
 
     // Post-activation: a similar transaction should now be rejected
     {
@@ -1732,8 +1870,6 @@ async fn push_limit_activation_test() {
             vec![],
         );
         tx.finalize();
-        let digest = tx.seq_commit_digest();
-        let tx_id = tx.id();
         let mut tx = MutableTransaction::from_tx(tx);
         // This triggers storage mass population
         let _ = consensus.validate_mempool_transaction(&mut tx, &TransactionValidationArgs::default());
@@ -1747,8 +1883,14 @@ async fn push_limit_activation_test() {
 
         let block_status = consensus.validate_and_insert_block(block.to_immutable()).virtual_state_task.await;
         assert!(matches!(block_status, Ok(BlockStatus::StatusDisqualifiedFromChain)));
-        assert!(!consensus.lkg_virtual_state.load().accepted_tx_digests.contains(&digest));
-        assert!(!consensus.lkg_virtual_state.load().accepted_tx_digests.contains(&tx_id));
+        next_id += 1;
+
+        // Mine virtual so seqcommit data is available in the SMT stores.
+        let accepting_block = next_id.into();
+        let block_status = consensus.add_utxo_valid_block_with_parents(accepting_block, vec![tip], vec![]).await;
+        assert!(matches!(block_status, Ok(BlockStatus::StatusUTXOValid)));
+        // Use the persisted SMT stores to verify tx exclusion from the seqcommit.
+        assert_tx_not_in_chain_seq_commit(&consensus, accepting_block, &tx);
     }
 
     consensus.shutdown(wait_handles);
@@ -1873,7 +2015,261 @@ async fn payload_for_native_tx_test() {
     let status = consensus.add_utxo_valid_block_with_parents(1.into(), vec![config.genesis.hash], vec![tx.tx.unwrap_or_clone()]).await;
 
     assert!(matches!(status, Ok(BlockStatus::StatusUTXOValid)));
-    assert!(consensus.lkg_virtual_state.load().accepted_tx_digests.contains(&tx_id)); // covenants not enabled yet, so accepted_tx_digests contains txid
+    assert!(consensus.lkg_virtual_state.load().accepted_id_digests.contains(&tx_id)); // covenants not enabled yet, so accepted_id_digests contains txid
+}
+
+fn build_p2pk_block(
+    mass_per_sig_op: u64,
+    tx_count: usize,
+) -> (TestConsensus, Vec<std::thread::JoinHandle<()>>, Vec<Transaction>, Block) {
+    let secp = secp256k1::Secp256k1::new();
+    let (secret_key, _) = secp.generate_keypair(&mut rand::thread_rng());
+    let keypair = secp256k1::Keypair::from_seckey_slice(secp256k1::SECP256K1, &secret_key.secret_bytes()).unwrap();
+    let p2pk_script = ScriptPublicKey::from_vec(
+        0,
+        std::iter::once(0x20).chain(keypair.x_only_public_key().0.serialize()).chain(std::iter::once(0xac)).collect(),
+    );
+    let initial_utxo_collection = (0..16)
+        .map(|i| {
+            (
+                TransactionOutpoint::new((i as u64 + 1).into(), 0),
+                UtxoEntry {
+                    amount: SOMPI_PER_KASPA / 10,
+                    script_public_key: p2pk_script.clone(),
+                    block_daa_score: 0,
+                    is_coinbase: false,
+                    covenant_id: None,
+                },
+            )
+        })
+        .collect::<Vec<_>>();
+
+    let config = ConfigBuilder::new(DEVNET_PARAMS)
+        .skip_proof_of_work()
+        .edit_consensus_params(|p| {
+            let mut genesis_multiset = MuHash::new();
+            initial_utxo_collection.iter().for_each(|(outpoint, utxo)| {
+                genesis_multiset.add_utxo(outpoint, utxo);
+            });
+            p.genesis.utxo_commitment = genesis_multiset.finalize();
+            let genesis_header: Header = (&p.genesis).into();
+            p.genesis.hash = genesis_header.hash;
+            p.mass_per_sig_op = mass_per_sig_op;
+            p.block_mass_limits = BlockMassLimits { compute: 10_000, storage: u64::MAX, transient: u64::MAX };
+            p.covenants_activation = ForkActivation::always();
+        })
+        .build();
+
+    let consensus = TestConsensus::new(&config);
+    let mut genesis_multiset = MuHash::new();
+    consensus.append_imported_pruning_point_utxos(&initial_utxo_collection, &mut genesis_multiset);
+    consensus.import_pruning_point_utxo_set(config.genesis.hash, genesis_multiset).unwrap();
+    let wait_handles = consensus.init();
+
+    let transactions = initial_utxo_collection
+        .iter()
+        .take(tx_count)
+        .map(|(outpoint, utxo)| {
+            let unsigned_tx = Transaction::new(
+                0,
+                vec![TransactionInput::new(*outpoint, vec![], 0, 0)],
+                vec![TransactionOutput::new(utxo.amount, p2pk_script.clone())],
+                0,
+                SUBNETWORK_ID_NATIVE,
+                0,
+                vec![],
+            );
+            let signed_tx = sign(MutableTransaction::with_entries(unsigned_tx, vec![utxo.clone()]), keypair).tx;
+            assert_eq!(signed_tx.inputs[0].mass.sig_op_count(), Some(1));
+            signed_tx
+        })
+        .collect::<Vec<_>>();
+
+    let mut block = consensus.build_utxo_valid_block_with_parents(
+        1.into(),
+        vec![config.genesis.hash],
+        MinerData::new(ScriptPublicKey::from_vec(0, vec![]), vec![]),
+        vec![],
+    );
+    block.transactions.extend(transactions.iter().cloned());
+    block.header.hash_merkle_root = calc_hash_merkle_root(block.transactions.iter());
+
+    (consensus, wait_handles, transactions, block.to_immutable())
+}
+
+fn init_testnet12_stark_fixture() -> (TestConsensus, Vec<std::thread::JoinHandle<()>>, Hash, Vec<Transaction>) {
+    let redeem_script = ScriptBuilder::new().add_op(OpZkPrecompile).unwrap().drain();
+    let stark_spk = pay_to_script_hash_script(&redeem_script);
+    let output_spk = ScriptPublicKey::from_vec(0, vec![OpTrue]);
+
+    let (control_id, seal, claim, hashfn, control_index, control_digests, journal, image_id) = load_stark_fields();
+    let stark_tag = ZkTag::R0Succinct as u8;
+    let stark_signature_prefix = ScriptBuilder::new()
+        .add_data(&claim)
+        .unwrap()
+        .add_data(&control_index)
+        .unwrap()
+        .add_data(&control_digests)
+        .unwrap()
+        .add_data(&seal)
+        .unwrap()
+        .add_data(&journal)
+        .unwrap()
+        .add_data(&image_id)
+        .unwrap()
+        .add_data(&control_id)
+        .unwrap()
+        .add_data(&hashfn)
+        .unwrap()
+        .add_data(&[stark_tag])
+        .unwrap()
+        .drain();
+    let stark_signature_script =
+        pay_to_script_hash_signature_script(redeem_script.clone(), stark_signature_prefix).expect("canonical signature script");
+
+    let required_script_units = {
+        let input = TransactionInput::new_with_compute_budget(
+            TransactionOutpoint { transaction_id: TransactionId::from_bytes([0u8; 32]), index: 0 },
+            stark_signature_script.clone(),
+            0,
+            0,
+        );
+        let tx = Transaction::new(TX_VERSION_TOCCATA, vec![input.clone()], vec![], 0, Default::default(), 0, vec![]);
+        let utxo_entry = UtxoEntry::new(10 * SOMPI_PER_KASPA, stark_spk.clone(), 0, false, None);
+        let populated_tx = PopulatedTransaction::new(&tx, vec![utxo_entry.clone()]);
+        let sig_cache = Cache::new(10_000);
+        let reused_values = SigHashReusedValuesUnsync::new();
+        let mut vm = TxScriptEngine::from_transaction_input(
+            &populated_tx,
+            &input,
+            0,
+            &utxo_entry,
+            EngineCtx::new(&sig_cache).with_reused(&reused_values),
+            EngineFlags { covenants_enabled: true, ..Default::default() },
+        );
+        vm.execute().expect("expected Stark proof to verify");
+        vm.used_script_units()
+    };
+    let compute_budget = ComputeBudget::checked_covering_script_units(required_script_units)
+        .expect("expected Stark script units to fit in compute budget");
+
+    let initial_utxo_collection = (0..2)
+        .map(|i| {
+            (
+                TransactionOutpoint::new((i as u64 + 1).into(), 0),
+                UtxoEntry {
+                    amount: 10 * SOMPI_PER_KASPA,
+                    script_public_key: stark_spk.clone(),
+                    block_daa_score: 0,
+                    is_coinbase: false,
+                    covenant_id: None,
+                },
+            )
+        })
+        .collect::<Vec<_>>();
+
+    let config = ConfigBuilder::new(TESTNET12_PARAMS)
+        .skip_proof_of_work()
+        .edit_consensus_params(|p| {
+            let mut genesis_multiset = MuHash::new();
+            initial_utxo_collection.iter().for_each(|(outpoint, utxo)| {
+                genesis_multiset.add_utxo(outpoint, utxo);
+            });
+            p.genesis.utxo_commitment = genesis_multiset.finalize();
+            let genesis_header: Header = (&p.genesis).into();
+            p.genesis.hash = genesis_header.hash;
+        })
+        .build();
+
+    let consensus = TestConsensus::new(&config);
+    let mut genesis_multiset = MuHash::new();
+    consensus.append_imported_pruning_point_utxos(&initial_utxo_collection, &mut genesis_multiset);
+    consensus.import_pruning_point_utxo_set(config.genesis.hash, genesis_multiset).unwrap();
+    let wait_handles = consensus.init();
+
+    let transactions = initial_utxo_collection
+        .iter()
+        .map(|(outpoint, utxo)| {
+            let tx = Transaction::new(
+                TX_VERSION_TOCCATA,
+                vec![TransactionInput::new_with_compute_budget(*outpoint, stark_signature_script.clone(), 0, compute_budget.into())],
+                vec![TransactionOutput::new(utxo.amount, output_spk.clone())],
+                0,
+                SUBNETWORK_ID_NATIVE,
+                0,
+                vec![],
+            );
+            let mut tx = MutableTransaction::from_tx(tx);
+            // This runs the script engine and populates the storage mass commitment.
+            consensus
+                .validate_mempool_transaction(&mut tx, &TransactionValidationArgs::default())
+                .expect("expected Stark tx to be valid");
+            tx.tx.unwrap_or_clone()
+        })
+        .collect::<Vec<_>>();
+
+    (consensus, wait_handles, config.genesis.hash, transactions)
+}
+
+#[tokio::test]
+async fn mass_per_sig_op_does_not_change_block_capacity() {
+    init_allocator_with_default_settings();
+
+    for mass_per_sig_op in [0, 500, 1000] {
+        let (consensus, wait_handles, _, six_tx_block) = build_p2pk_block(mass_per_sig_op, 6);
+        assert_match!(
+            consensus.validate_and_insert_block(six_tx_block).virtual_state_task.await,
+            Ok(BlockStatus::StatusUTXOValid),
+            "expected 6 p2pk txs to fit for mass_per_sig_op={mass_per_sig_op}"
+        );
+        consensus.shutdown(wait_handles);
+
+        let (consensus, wait_handles, _, seven_tx_block) = build_p2pk_block(mass_per_sig_op, 7);
+        assert_match!(
+            consensus.validate_and_insert_block(seven_tx_block).virtual_state_task.await,
+            Err(RuleError::ExceedsComputeMassLimit(_, 10_000))
+        );
+        consensus.shutdown(wait_handles);
+    }
+
+    // We check that once mass_per_sig_op is raised to 2000, 6 transactions still fit into a block, but the script engine rejects them since the previous budget is not enough to cover the sig ops.
+    let (consensus, wait_handles, transactions, six_tx_block) = build_p2pk_block(2000, 6);
+    let mut tx = MutableTransaction::from_tx(transactions[0].clone());
+    assert_match!(
+        consensus.validate_mempool_transaction(&mut tx, &TransactionValidationArgs::default()),
+        Err(TxRuleError::SignatureInvalid(TxScriptError::ExceededScriptUnitsLimit { .. }))
+    );
+    assert_match!(
+        consensus.validate_and_insert_block(six_tx_block).virtual_state_task.await,
+        Ok(BlockStatus::StatusDisqualifiedFromChain)
+    );
+    consensus.shutdown(wait_handles);
+}
+
+#[tokio::test]
+async fn testnet12_accepts_one_valid_stark_proof_but_rejects_two() {
+    init_allocator_with_default_settings();
+
+    let (consensus, wait_handles, genesis_hash, transactions) = init_testnet12_stark_fixture();
+    let miner_data = MinerData::new(ScriptPublicKey::from_vec(0, vec![]), vec![]);
+    let one_stark_block = consensus
+        .build_utxo_valid_block_with_parents(new_unique(), vec![genesis_hash], miner_data.clone(), vec![transactions[0].clone()])
+        .to_immutable();
+    assert_match!(consensus.validate_and_insert_block(one_stark_block).virtual_state_task.await, Ok(BlockStatus::StatusUTXOValid));
+
+    let two_stark_block = consensus
+        .build_utxo_valid_block_with_parents(
+            new_unique(),
+            vec![genesis_hash],
+            miner_data,
+            vec![transactions[0].clone(), transactions[1].clone()],
+        )
+        .to_immutable();
+    assert_match!(
+        consensus.validate_and_insert_block(two_stark_block).virtual_state_task.await,
+        Err(RuleError::ExceedsComputeMassLimit(_, limit)) if limit == TESTNET12_PARAMS.block_mass_limits.compute
+    );
+    consensus.shutdown(wait_handles);
 }
 
 /// Tests runtime signature operation counting by verifying that:
