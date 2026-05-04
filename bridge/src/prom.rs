@@ -1577,4 +1577,40 @@ min_share_diff: 8192
         let root_resp = send_request(mode.clone(), "GET / HTTP/1.1\r\n\r\n").await;
         assert!(root_resp.contains("404 Not Found"));
     }
+
+    /// Static dashboard files should be served in Aggregated mode but blocked in MetricsOnly mode.
+    #[tokio::test]
+    async fn test_static_files_aggregated_mode() {
+        let mode = HttpMode::Aggregated { web_bind: "127.0.0.1:0".to_string() };
+
+        // Root path serves index.html
+        let root_resp = send_request(mode.clone(), "GET / HTTP/1.1\r\n\r\n").await;
+        assert!(root_resp.contains("200 OK"));
+        assert!(root_resp.contains("text/html"));
+
+        // /index.html also works
+        let index_resp = send_request(mode.clone(), "GET /index.html HTTP/1.1\r\n\r\n").await;
+        assert!(index_resp.contains("200 OK"));
+        assert!(index_resp.contains("text/html"));
+
+        // /raw.html works
+        let raw_resp = send_request(mode.clone(), "GET /raw.html HTTP/1.1\r\n\r\n").await;
+        assert!(raw_resp.contains("200 OK"));
+        assert!(raw_resp.contains("text/html"));
+
+        // Non-existent static file returns 404
+        let missing_resp = send_request(mode.clone(), "GET /nonexistent.html HTTP/1.1\r\n\r\n").await;
+        assert!(missing_resp.contains("404 Not Found"));
+    }
+
+    #[tokio::test]
+    async fn test_static_files_blocked_in_metrics_only_mode() {
+        let mode = HttpMode::MetricsOnly { instance_id: "0".to_string() };
+
+        // All static paths should return 404 in MetricsOnly mode
+        for path in &["GET / HTTP/1.1\r\n\r\n", "GET /index.html HTTP/1.1\r\n\r\n", "GET /raw.html HTTP/1.1\r\n\r\n"] {
+            let resp = send_request(mode.clone(), path).await;
+            assert!(resp.contains("404 Not Found"), "Expected 404 for {} in MetricsOnly mode", path.trim());
+        }
+    }
 }
