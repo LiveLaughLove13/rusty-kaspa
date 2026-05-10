@@ -176,6 +176,7 @@ tbody tr:hover {
 .table-wrap table {
   width: 100%;
   table-layout: fixed;
+  font-size: 13px;
 }
 
 .table-wrap th,
