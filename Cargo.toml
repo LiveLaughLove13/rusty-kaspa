@@ -197,7 +197,8 @@ fixedstr = { version = "0.5.4", features = ["serde"] }
 flate2 = "1.0.28"
 futures = { version = "0.3.29" }
 futures-util = { version = "0.3.29", default-features = false, features = ["alloc"] }
-getrandom = { version = "0.2.10", features = ["js"] }
+# `wasm_js` is required for wasm32-unknown-unknown (getrandom 0.3+); used by consensus-core / bip32 via workspace.
+getrandom = { version = "0.3.4", features = ["wasm_js"] }
 h2 = "0.4.6"
 # h2 = "0.3.21"
 heapless = "0.8.0"
