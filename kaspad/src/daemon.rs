@@ -276,6 +276,15 @@ fn configure_rocksdb(args: &Args) -> (RocksDbPreset, Option<usize>, Option<PathB
 ///
 pub fn create_core_with_runtime(runtime: &Runtime, args: &Args, fd_total_budget: i32) -> (Arc<Core>, Arc<RpcCoreService>) {
     let network = args.network();
+
+    // TODO(pre-covpp): Remove this log when Toccata activation DAA score is finalized on mainnet.
+    if network.is_mainnet() {
+        get_user_approval_or_exit(
+            "This version of kaspad does not officially support mainnet. Use with caution and report to developers if you encounter any issues. Do you want to continue? (y/n)",
+            args.yes,
+        );
+    }
+
     let mut fd_remaining = fd_total_budget;
     let utxo_files_limit = if args.utxoindex {
         let utxo_files_limit = fd_remaining / 10;
@@ -374,7 +383,8 @@ do you confirm? (answer y/n or pass --yes to the Kaspad command line to confirm 
             // This worst case usage only considers block space. It does not account for usage of
             // other stores (reachability, block status, mempool, etc.)
             let worst_case_usage = ((total_blocks + finality_depth)
-                * (config.block_mass_limits.transient / TRANSIENT_BYTE_TO_MASS_FACTOR)) as f64
+                * (config.block_mass_limits().after().transient / TRANSIENT_BYTE_TO_MASS_FACTOR))
+                as f64
                 / ONE_GIGABYTE;
 
             info!(
@@ -502,6 +512,10 @@ Do you confirm? (y/n)";
                 }
             }
         }
+        // no manual migration needed, but internal schema changes
+        if version <= 6 {
+            mcms.set_version(7).unwrap();
+        }
         // if we reached here, db should be upgraded fully and we should exit the loop next
         assert_eq!(mcms.version().unwrap(), LATEST_DB_VERSION);
     }
@@ -628,7 +642,7 @@ Do you confirm? (y/n)";
     let mining_manager = MiningManagerProxy::new(Arc::new(MiningManager::new_with_extended_config(
         config.target_time_per_block(),
         false,
-        config.block_mass_limits,
+        config.mempool_block_mass_limits(),
         config.block_lane_limits,
         config.ram_scale,
         config.block_template_cache_lifetime,

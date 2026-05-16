@@ -168,14 +168,14 @@ impl TransactionValidator {
         seq_commit_accessor: Option<&dyn SeqCommitAccessor>,
     ) -> TxResult<()> {
         let ctx = EngineCtx::new(&self.sig_cache).with_covenants_ctx(&covenants_ctx).with_seq_commit_accessor_opt(seq_commit_accessor);
-        let covenants_enabled = self.covenants_activation.is_active(block_daa_score);
+        let covenants_enabled = self.toccata_activation.is_active(block_daa_score);
         let flags: EngineFlags = EngineFlags { covenants_enabled, sigop_script_units: Gram(self.mass_per_sig_op).into() };
 
         check_scripts(tx, ctx, flags)
     }
 
     fn check_covenant_info(&self, tx: &impl VerifiableTransaction, block_daa_score: u64) -> TxResult<CovenantsContext> {
-        if !self.covenants_activation.is_active(block_daa_score) {
+        if !self.toccata_activation.is_active(block_daa_score) {
             return Ok(Default::default());
         }
 
@@ -271,9 +271,16 @@ mod tests {
     fn build_parallel_push_budget_test_tx(num_inputs: usize) -> (Transaction, Vec<UtxoEntry>) {
         assert!(num_inputs > CHECK_SCRIPTS_PARALLELISM_THRESHOLD);
 
-        let signature_prefix =
-            ScriptBuilder::new().add_data(&vec![1u8; SCRIPT_UNITS_PER_COMPUTE_BUDGET_UNIT as usize]).unwrap().drain();
-        let redeem_script = ScriptBuilder::new().add_op(OpDup).unwrap().add_op(OpDrop).unwrap().drain();
+        let signature_prefix = ScriptBuilder::with_flags(EngineFlags { covenants_enabled: true, ..Default::default() })
+            .add_data(&vec![1u8; SCRIPT_UNITS_PER_COMPUTE_BUDGET_UNIT as usize])
+            .unwrap()
+            .drain();
+        let redeem_script = ScriptBuilder::with_flags(EngineFlags { covenants_enabled: true, ..Default::default() })
+            .add_op(OpDup)
+            .unwrap()
+            .add_op(OpDrop)
+            .unwrap()
+            .drain();
         let script_public_key = pay_to_script_hash_script(&redeem_script);
         let outputs = vec![TransactionOutput {
             value: 1,
@@ -319,7 +326,7 @@ mod tests {
         let result = check_scripts(&populated_tx, EngineCtx::new(&sig_cache), flags);
         assert_match!(
             result,
-            Err(TxRuleError::SignatureInvalid(TxScriptError::ExceededScriptUnitsLimit { limit, .. }))
+            Err(TxRuleError::SignatureInvalid(TxScriptError::ExceededCommittedScriptUnits { limit, .. }))
                 if limit == free_script_units_per_input().0
         );
 
@@ -344,7 +351,7 @@ mod tests {
         let tv = TransactionValidator::new(
             params.max_tx_inputs,
             params.max_tx_outputs,
-            params.max_signature_script_len,
+            params.max_signature_script_len(),
             params.max_script_public_key_len,
             params.coinbase_payload_script_public_key_max_len,
             params.coinbase_maturity(),
@@ -416,7 +423,7 @@ mod tests {
                 tv.validate_populated_transaction_and_get_fee(&verifiable_tx, 0, 0, TxValidationFlags::SkipMassCheck, None, None);
             assert_match!(
                 result,
-                Err(TxRuleError::SignatureInvalid(TxScriptError::ExceededScriptUnitsLimit { .. })),
+                Err(TxRuleError::SignatureInvalid(TxScriptError::ExceededCommittedScriptUnits { .. })),
                 "expected sigop budget enforcement for tx version {version}"
             );
         }
@@ -502,7 +509,7 @@ mod tests {
         let tv = TransactionValidator::new_for_tests(
             params.max_tx_inputs,
             params.max_tx_outputs,
-            params.max_signature_script_len,
+            params.max_signature_script_len(),
             params.max_script_public_key_len,
             params.coinbase_payload_script_public_key_max_len,
             params.coinbase_maturity(),
@@ -577,7 +584,7 @@ mod tests {
         let tv = TransactionValidator::new_for_tests(
             params.max_tx_inputs,
             params.max_tx_outputs,
-            params.max_signature_script_len,
+            params.max_signature_script_len(),
             params.max_script_public_key_len,
             params.coinbase_payload_script_public_key_max_len,
             params.coinbase_maturity(),
@@ -657,7 +664,7 @@ mod tests {
         let tv = TransactionValidator::new_for_tests(
             params.max_tx_inputs,
             params.max_tx_outputs,
-            params.max_signature_script_len,
+            params.max_signature_script_len(),
             params.max_script_public_key_len,
             params.coinbase_payload_script_public_key_max_len,
             params.coinbase_maturity(),
@@ -738,7 +745,7 @@ mod tests {
         let tv = TransactionValidator::new_for_tests(
             params.max_tx_inputs,
             params.max_tx_outputs,
-            params.max_signature_script_len,
+            params.max_signature_script_len(),
             params.max_script_public_key_len,
             params.coinbase_payload_script_public_key_max_len,
             params.coinbase_maturity(),
@@ -821,7 +828,7 @@ mod tests {
         let tv = TransactionValidator::new_for_tests(
             params.max_tx_inputs,
             params.max_tx_outputs,
-            params.max_signature_script_len,
+            params.max_signature_script_len(),
             params.max_script_public_key_len,
             params.coinbase_payload_script_public_key_max_len,
             params.coinbase_maturity(),
@@ -904,7 +911,7 @@ mod tests {
         let tv = TransactionValidator::new_for_tests(
             params.max_tx_inputs,
             params.max_tx_outputs,
-            params.max_signature_script_len,
+            params.max_signature_script_len(),
             params.max_script_public_key_len,
             params.coinbase_payload_script_public_key_max_len,
             params.coinbase_maturity(),
@@ -986,7 +993,7 @@ mod tests {
         let tv = TransactionValidator::new_for_tests(
             params.max_tx_inputs,
             params.max_tx_outputs,
-            params.max_signature_script_len,
+            params.max_signature_script_len(),
             params.max_script_public_key_len,
             params.coinbase_payload_script_public_key_max_len,
             params.coinbase_maturity(),
@@ -1055,7 +1062,7 @@ mod tests {
         let tv = TransactionValidator::new_for_tests(
             params.max_tx_inputs,
             params.max_tx_outputs,
-            params.max_signature_script_len,
+            params.max_signature_script_len(),
             params.max_script_public_key_len,
             params.coinbase_payload_script_public_key_max_len,
             params.coinbase_maturity(),
