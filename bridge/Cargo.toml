@@ -70,6 +70,7 @@ mimalloc = { version = "0.1.48", default-features = false, features = ["override
 mimalloc = { version = "0.1.48", default-features = false }
 
 [dev-dependencies]
+rand = { workspace = true }
 tokio-test = "0.4"
 
 [[bin]]

@@ -3755,6 +3755,7 @@ dependencies = [
  "once_cell",
  "parking_lot",
  "prometheus",
+ "rand 0.8.6",
  "regex",
  "serde",
  "serde_json",
