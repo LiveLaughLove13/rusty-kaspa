@@ -8,8 +8,8 @@ use kaspa_notify::{listener::ListenerId, scope::NewBlockTemplateScope};
 use kaspa_rpc_core::notify::mode::NotificationMode;
 use kaspa_rpc_core::{
     GetBlockDagInfoRequest, GetBlockTemplateRequest, GetConnectedPeerInfoRequest, GetCurrentBlockColorRequest, GetInfoRequest,
-    GetServerInfoRequest, GetSinkBlueScoreRequest, Notification, RpcHash, RpcRawBlock, SubmitBlockRequest, SubmitBlockResponse,
-    api::rpc::RpcApi,
+    GetServerInfoRequest, GetSinkBlueScoreRequest, Notification, RpcError, RpcHash, RpcRawBlock, SubmitBlockRequest,
+    SubmitBlockResponse, api::rpc::RpcApi,
 };
 use once_cell::sync::Lazy;
 use parking_lot::Mutex;
@@ -413,13 +413,14 @@ impl KaspaApi {
             let connected = self.client.is_connected();
 
             let server_info_fut = self.client.get_server_info_call(None, GetServerInfoRequest {});
+            let sync_status_fut = self.client.get_sync_status();
             let dag_info_fut = self.client.get_block_dag_info_call(None, GetBlockDagInfoRequest {});
             let peers_fut = self.client.get_connected_peer_info_call(None, GetConnectedPeerInfoRequest {});
             let info_fut = self.client.get_info_call(None, GetInfoRequest {});
             let sink_bs_fut = self.client.get_sink_blue_score_call(None, GetSinkBlueScoreRequest {});
 
-            let (server_info, dag_info, peers_info, info_resp, sink_bs_resp) =
-                tokio::join!(server_info_fut, dag_info_fut, peers_fut, info_fut, sink_bs_fut);
+            let (server_info, sync_status, dag_info, peers_info, info_resp, sink_bs_resp) =
+                tokio::join!(server_info_fut, sync_status_fut, dag_info_fut, peers_fut, info_fut, sink_bs_fut);
 
             let mut snapshot = NODE_STATUS.lock();
             snapshot.last_updated = Some(Instant::now());
@@ -427,11 +428,13 @@ impl KaspaApi {
             snapshot.is_connected = connected;
 
             if let Ok(server_info) = server_info {
-                snapshot.is_synced = Some(server_info.is_synced);
                 snapshot.network_id = Some(format!("{:?}", server_info.network_id));
                 snapshot.server_version = Some(server_info.server_version);
                 snapshot.virtual_daa_score = Some(server_info.virtual_daa_score);
             }
+
+            // Match bridge `wait_for_sync` / internal miner gate (includes transitional IBD).
+            snapshot.is_synced = sync_status.ok();
 
             if let Ok(dag) = dag_info {
                 snapshot.block_count = Some(dag.block_count);
@@ -715,6 +718,70 @@ impl KaspaApi {
         Ok(())
     }
 
+    /// Whether the node will accept mined blocks (matches `submit_block` / `GetBlockTemplateResponse.is_synced`).
+    ///
+    /// `get_sync_status` alone can be true while `should_mine` is still false, which yields templates but
+    /// `Reject(IsInIBD)` on submit — the internal CPU miner must wait on this, not only `get_sync_status`.
+    pub async fn is_mining_ready(&self, pay_address: &str) -> Result<bool> {
+        if !self.client.get_sync_status().await.context("get_sync_status")? {
+            return Ok(false);
+        }
+
+        let address = Address::try_from(pay_address)
+            .map_err(|e| anyhow::anyhow!("Could not decode address {}: {}", pay_address, e))?;
+
+        match self
+            .client
+            .get_block_template_call(None, GetBlockTemplateRequest::new(address, self.coinbase_tag.clone()))
+            .await
+        {
+            Ok(response) => Ok(response.is_synced),
+            Err(RpcError::ConsensusInTransitionalIbdState) => Ok(false),
+            Err(e) => Err(anyhow::anyhow!("get_block_template (mining readiness probe): {e}")),
+        }
+    }
+
+    /// Wait until the node is safe to mine (sync + kaspad `is_synced` on a real template).
+    pub async fn wait_for_mining_ready_with_shutdown(
+        &self,
+        pay_address: &str,
+        mut shutdown_rx: watch::Receiver<bool>,
+    ) -> Result<()> {
+        debug!("checking kaspad mining readiness (sync + template is_synced)");
+
+        loop {
+            let ready_fut = self.is_mining_ready(pay_address);
+            let ready_res = tokio::select! {
+                _ = shutdown_rx.wait_for(|v| *v) => {
+                    return Err(anyhow::anyhow!("shutdown requested"));
+                }
+                res = ready_fut => res,
+            };
+
+            match ready_res {
+                Ok(true) => {
+                    debug!("kaspad mining-ready, starting internal CPU miner");
+                    break;
+                }
+                Ok(false) => {}
+                Err(e) => {
+                    warn!("failed to probe mining readiness: {e}, retrying...");
+                }
+            }
+
+            warn!("Kaspa is not mining-ready (IBD/sync or template is_synced=false), waiting before internal CPU miner");
+
+            tokio::select! {
+                _ = shutdown_rx.wait_for(|v| *v) => {
+                    return Err(anyhow::anyhow!("shutdown requested"));
+                }
+                _ = sleep(Duration::from_secs(10)) => {}
+            }
+        }
+
+        Ok(())
+    }
+
     /// Check if connected
     pub fn is_connected(&self) -> bool {
         *self.connected.lock()
@@ -848,6 +915,12 @@ impl KaspaApi {
             };
 
             // Get RPC block from response (preserve original with covenant data)
+            if !response.is_synced {
+                return Err(anyhow::anyhow!(
+                    "node returned block template with is_synced=false (still syncing — do not mine yet)"
+                ));
+            }
+
             let rpc_block = response.block.clone();
 
             // Convert RpcRawBlock to Block for PoW validation

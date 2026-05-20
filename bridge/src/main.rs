@@ -319,6 +319,12 @@ async fn main() -> Result<(), anyhow::Error> {
                 .clone()
                 .ok_or_else(|| anyhow::anyhow!("--internal-cpu-miner requires --internal-cpu-miner-address <kaspa:...>"))?;
 
+            tracing::info!("Waiting for node mining readiness before starting internal CPU miner");
+            kaspa_api
+                .wait_for_mining_ready_with_shutdown(mining_address.as_str(), shutdown_rx.clone())
+                .await
+                .map_err(|e| anyhow::anyhow!("Failed while waiting for mining readiness: {}", e))?;
+
             let threads = cli.internal_cpu_miner_threads.unwrap_or(1);
             let throttle = cli.internal_cpu_miner_throttle_ms.map(Duration::from_millis);
             // Default 50ms template poll for faster work updates on high-BPS networks (e.g. TN12).

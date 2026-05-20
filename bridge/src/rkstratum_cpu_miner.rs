@@ -2,7 +2,7 @@ use crate::kaspaapi::KaspaApi;
 #[cfg(feature = "rkstratum_cpu_miner")]
 use crate::share_handler::increment_internal_cpu_blocks_all_time;
 use kaspa_consensus_core::block::Block;
-use kaspa_rpc_core::RpcRawBlock;
+use kaspa_rpc_core::{RpcRawBlock, SubmitBlockRejectReason, SubmitBlockReport};
 use parking_lot::{Condvar, Mutex};
 use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
@@ -91,6 +91,14 @@ impl SharedWork {
     fn notify_all(&self) {
         self.cv.notify_all();
     }
+
+    /// Drop current template so hash threads idle until a mining-ready template is published.
+    fn pause_work(&self) {
+        let mut slot = self.slot.lock();
+        slot.version = slot.version.wrapping_add(1);
+        slot.work = None;
+        self.cv.notify_all();
+    }
 }
 
 pub fn spawn_internal_cpu_miner(
@@ -124,6 +132,7 @@ pub fn spawn_internal_cpu_miner(
     let (submit_tx, mut submit_rx) = mpsc::unbounded_channel::<RpcRawBlock>();
     let kaspa_api_submit = Arc::clone(&kaspa_api);
     let shutdown_flag_submit = Arc::clone(&shutdown_flag);
+    let work_on_submit_reject = Arc::clone(&work);
     tokio::spawn(async move {
         while let Some(rpc_block) = submit_rx.recv().await {
             if shutdown_flag_submit.load(Ordering::Acquire) {
@@ -175,6 +184,15 @@ pub fn spawn_internal_cpu_miner(
                                 "[InternalMiner] accepted block but could not derive consensus header for BLUE confirmation"
                             );
                         }
+                    } else if matches!(
+                        &response.report,
+                        SubmitBlockReport::Reject(SubmitBlockRejectReason::IsInIBD)
+                    ) {
+                        work_on_submit_reject.pause_work();
+                        tracing::warn!(
+                            "[InternalMiner] block rejected by node: {:?} — paused hashing until node is mining-ready",
+                            response.report
+                        );
                     } else {
                         tracing::warn!("[InternalMiner] block rejected by node: {:?}", response.report);
                     }
