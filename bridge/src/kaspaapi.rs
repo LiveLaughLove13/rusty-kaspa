@@ -727,14 +727,10 @@ impl KaspaApi {
             return Ok(false);
         }
 
-        let address = Address::try_from(pay_address)
-            .map_err(|e| anyhow::anyhow!("Could not decode address {}: {}", pay_address, e))?;
+        let address =
+            Address::try_from(pay_address).map_err(|e| anyhow::anyhow!("Could not decode address {}: {}", pay_address, e))?;
 
-        match self
-            .client
-            .get_block_template_call(None, GetBlockTemplateRequest::new(address, self.coinbase_tag.clone()))
-            .await
-        {
+        match self.client.get_block_template_call(None, GetBlockTemplateRequest::new(address, self.coinbase_tag.clone())).await {
             Ok(response) => Ok(response.is_synced),
             Err(RpcError::ConsensusInTransitionalIbdState) => Ok(false),
             Err(e) => Err(anyhow::anyhow!("get_block_template (mining readiness probe): {e}")),
@@ -742,11 +738,7 @@ impl KaspaApi {
     }
 
     /// Wait until the node is safe to mine (sync + kaspad `is_synced` on a real template).
-    pub async fn wait_for_mining_ready_with_shutdown(
-        &self,
-        pay_address: &str,
-        mut shutdown_rx: watch::Receiver<bool>,
-    ) -> Result<()> {
+    pub async fn wait_for_mining_ready_with_shutdown(&self, pay_address: &str, mut shutdown_rx: watch::Receiver<bool>) -> Result<()> {
         debug!("checking kaspad mining readiness (sync + template is_synced)");
 
         loop {
@@ -916,9 +908,7 @@ impl KaspaApi {
 
             // Get RPC block from response (preserve original with covenant data)
             if !response.is_synced {
-                return Err(anyhow::anyhow!(
-                    "node returned block template with is_synced=false (still syncing — do not mine yet)"
-                ));
+                return Err(anyhow::anyhow!("node returned block template with is_synced=false (still syncing — do not mine yet)"));
             }
 
             let rpc_block = response.block.clone();

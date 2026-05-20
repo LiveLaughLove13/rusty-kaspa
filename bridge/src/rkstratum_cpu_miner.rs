@@ -184,10 +184,7 @@ pub fn spawn_internal_cpu_miner(
                                 "[InternalMiner] accepted block but could not derive consensus header for BLUE confirmation"
                             );
                         }
-                    } else if matches!(
-                        &response.report,
-                        SubmitBlockReport::Reject(SubmitBlockRejectReason::IsInIBD)
-                    ) {
+                    } else if matches!(&response.report, SubmitBlockReport::Reject(SubmitBlockRejectReason::IsInIBD)) {
                         work_on_submit_reject.pause_work();
                         tracing::warn!(
                             "[InternalMiner] block rejected by node: {:?} — paused hashing until node is mining-ready",
