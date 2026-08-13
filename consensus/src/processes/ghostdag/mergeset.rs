@@ -40,8 +40,8 @@ pub fn unordered_mergeset_without_selected_parent<S: RelationsStoreReader + ?Siz
 }
 
 impl<T: GhostdagStoreReader, S: RelationsStoreReader, U: ReachabilityService, V: HeaderStoreReader> GhostdagManager<T, S, U, V> {
-    pub fn ordered_mergeset_without_selected_parent(&self, selected_parent: Hash, parents: &[Hash]) -> Vec<Hash> {
-        self.sort_blocks(self.unordered_mergeset_without_selected_parent(selected_parent, parents))
+    pub fn ordered_mergeset_without_selected_parent(&self, selected_parent: Hash, parents: &[Hash], sp_daa_score: u64) -> Vec<Hash> {
+        self.sort_blocks(self.unordered_mergeset_without_selected_parent(selected_parent, parents), sp_daa_score)
     }
 
     pub fn unordered_mergeset_without_selected_parent(&self, selected_parent: Hash, parents: &[Hash]) -> BlockHashSet {

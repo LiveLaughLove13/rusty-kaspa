@@ -3,6 +3,7 @@ use std::sync::Arc;
 use kaspa_consensus_core::{
     BlockHashMap, BlockLevel, BlueWorkType, HashMapCustomHasher,
     blockhash::{self, BlockHashExtensions, BlockHashes},
+    config::params::ForkActivation,
 };
 use kaspa_hashes::Hash;
 use kaspa_utils::refs::Refs;
@@ -39,6 +40,8 @@ pub struct GhostdagManager<T: GhostdagStoreReader, S: RelationsStoreReader, U: R
     /// work regardless of whether current difficulty requires 20 zeros or 25 zeros.  
     level_work: BlueWorkType,
     pub(super) custom_topology_store: Option<Arc<T>>,
+    // FIXME: Remove after activation
+    pub(super) custom_topology_fork: Option<ForkActivation>,
 }
 
 impl<T: GhostdagStoreReader, S: RelationsStoreReader, U: ReachabilityService, V: HeaderStoreReader> GhostdagManager<T, S, U, V> {
@@ -60,6 +63,7 @@ impl<T: GhostdagStoreReader, S: RelationsStoreReader, U: ReachabilityService, V:
             headers_store,
             level_work: 0.into(),
             custom_topology_store: None,
+            custom_topology_fork: None,
         }
     }
 
@@ -82,6 +86,7 @@ impl<T: GhostdagStoreReader, S: RelationsStoreReader, U: ReachabilityService, V:
             headers_store,
             level_work: level_work(level, max_block_level),
             custom_topology_store: None,
+            custom_topology_fork: None,
         }
     }
 
@@ -103,6 +108,7 @@ impl<T: GhostdagStoreReader, S: RelationsStoreReader, U: ReachabilityService, V:
             headers_store,
             level_work: 0.into(),
             custom_topology_store: Some(custom_topology_store),
+            custom_topology_fork: Some(ForkActivation::new(150_000_000)),
         }
     }
 
@@ -174,7 +180,9 @@ impl<T: GhostdagStoreReader, S: RelationsStoreReader, U: ReachabilityService, V:
         // Initialize new GHOSTDAG block data with the selected parent
         let mut new_block_data = GhostdagData::new_with_selected_parent(selected_parent, k);
         // Get the mergeset in consensus-agreed topological order (topological here means forward in time from blocks to children)
-        let ordered_mergeset = self.ordered_mergeset_without_selected_parent(selected_parent, parents);
+        // FIXME: remove after activation
+        let sp_daa_score = self.headers_store.get_daa_score(selected_parent).unwrap();
+        let ordered_mergeset = self.ordered_mergeset_without_selected_parent(selected_parent, parents, sp_daa_score);
 
         for blue_candidate in ordered_mergeset.iter().cloned() {
             let coloring = self.check_blue_candidate(&new_block_data, blue_candidate, k);
