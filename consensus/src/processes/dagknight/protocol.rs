@@ -393,7 +393,8 @@ impl<
                     reachability_service.clone(),
                 );
 
-                czm.fill_zone_data(subgroup);
+                // let nca = self.reachability_service.get_next_chain_ancestor(subgroup[0], *cg);
+                czm.fill_zone_data(subgroup, Some(*cg));
 
                 let subgroup_limited_virtual = czm.k_colouring(subgroup, 0, None);
                 debug!("cg: {} | subgroup: {} | blue_work: {}", conflict_genesis, cg, subgroup_limited_virtual.blue_work.as_u64());
