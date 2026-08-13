@@ -108,7 +108,7 @@ impl<T: GhostdagStoreReader, S: RelationsStoreReader, U: ReachabilityService, V:
             headers_store,
             level_work: 0.into(),
             custom_topology_store: Some(custom_topology_store),
-            custom_topology_fork: Some(ForkActivation::new(150_000_000)),
+            custom_topology_fork: Some(ForkActivation::new(148_720_000)),
         }
     }
 
