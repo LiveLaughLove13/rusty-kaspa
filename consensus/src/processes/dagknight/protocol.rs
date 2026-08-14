@@ -230,8 +230,6 @@ impl<
         */
 
         // g = find LCCA
-        let use_new_logic =
-            parents.iter().map(|parent| self.headers_store.get_daa_score(*parent).unwrap()).max().unwrap() > 148_720_000;
         let mut conflict_genesis = self.common_chain_ancestor(parents);
         let mut curr_subgroup = Arc::new(parents.iter().unique().copied().collect_vec());
         let mut conflict_ordered_parents = vec![];
@@ -280,7 +278,7 @@ impl<
 
                     (key, value)
                 } else {
-                    let best_groups = self.rank(conflict_genesis, &agreement_grouping, &curr_subgroup, &weak_groups, use_new_logic);
+                    let best_groups = self.rank(conflict_genesis, &agreement_grouping, &curr_subgroup, &weak_groups);
 
                     #[allow(clippy::style)]
                     let final_winner = if best_groups.len() > 1 {
@@ -581,7 +579,6 @@ impl<
         agreeing_subgroups: &HashMap<Hash, Arc<Vec<Hash>>>,
         all_tips: &[Hash],
         weak_groups: &BlockHashSet,
-        use_new_logic: bool,
     ) -> Vec<GroupMetadata> {
         let weak_groups = weak_groups.clone();
         let mut group_map = Cell::new(agreeing_subgroups.clone());
@@ -596,7 +593,7 @@ impl<
                     let selected_parent = if weak_groups.contains(curr_conflict_genesis) {
                         None
                     } else {
-                        self.select_parent_from_k_colouring(conflict_genesis, subgroup.as_ref(), all_tips, k, use_new_logic)
+                        self.select_parent_from_k_colouring(conflict_genesis, subgroup.as_ref(), all_tips, k)
                     };
                     selected_parent.map(|selected_parent| {
                         (
@@ -690,7 +687,6 @@ impl<
         subgroup: &[Hash],
         all_tips: &[Hash],
         k_to_check: KType,
-        use_new_logic: bool,
     ) -> Option<SortableBlock> {
         let reachability_service = self.reachability_service.clone();
         let relations_store = self.relations_store.read();
@@ -753,8 +749,7 @@ impl<
                 "UMC VOTE DIFFERENCE: original={vote_original}, proposed={vote_proposed}, k={k_to_check}, conflict_genesis={conflict_genesis:#?}"
             );
         }
-        let used_vote = if use_new_logic { vote_proposed } else { vote_original };
-        if used_vote {
+        if vote_proposed {
             Some(SortableBlock {
                 hash: subgroup_virtual_sp,
                 blue_work: self.headers_store.get_header(subgroup_virtual_sp).unwrap().blue_work,

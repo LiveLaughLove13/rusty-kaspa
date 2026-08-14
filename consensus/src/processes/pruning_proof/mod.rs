@@ -260,7 +260,7 @@ impl PruningProofManager {
             .traversal_manager
             .anticone(pruning_point, virtual_parents, None)
             .expect("no error is expected when max_traversal_allowed is None");
-        let mut anticone = self.coloring_ghostdag_manager.sort_blocks(anticone, u64::MAX);
+        let mut anticone = self.coloring_ghostdag_manager.sort_blocks(anticone);
         anticone.insert(0, pruning_point);
 
         let mut daa_window_blocks = BlockHashMap::new();
