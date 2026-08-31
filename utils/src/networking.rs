@@ -5,6 +5,7 @@ use alloc::string::String;
 use borsh::{BorshDeserialize, BorshSerialize};
 use core::{
     fmt::Display,
+    hash::{Hash, Hasher},
     net::{AddrParseError, IpAddr, Ipv4Addr, Ipv6Addr, SocketAddr},
     ops::Deref,
     str::FromStr,
@@ -426,15 +427,15 @@ impl PartialEq for NetAddress {
 
 impl Eq for NetAddress {}
 
-impl std::hash::Hash for NetAddress {
-    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+impl Hash for NetAddress {
+    fn hash<H: Hasher>(&self, state: &mut H) {
         self.ip.hash(state);
         self.port.hash(state);
     }
 }
 
 impl BorshSerialize for NetAddress {
-    fn serialize<W: std::io::Write>(&self, writer: &mut W) -> ::core::result::Result<(), std::io::Error> {
+    fn serialize<W: borsh::io::Write>(&self, writer: &mut W) -> ::core::result::Result<(), borsh::io::Error> {
         BorshSerialize::serialize(&self.ip, writer)?;
         BorshSerialize::serialize(&self.port, writer)?;
         BorshSerialize::serialize(&self.services, writer)?;
@@ -449,49 +450,49 @@ impl BorshSerialize for NetAddress {
 }
 
 impl BorshDeserialize for NetAddress {
-    fn deserialize_reader<R: std::io::Read>(reader: &mut R) -> ::core::result::Result<Self, borsh::io::Error> {
+    fn deserialize_reader<R: borsh::io::Read>(reader: &mut R) -> ::core::result::Result<Self, borsh::io::Error> {
         let ip = IpAddress::deserialize_reader(reader)?;
         let port = u16::deserialize_reader(reader)?;
 
         let services = match u64::deserialize_reader(reader) {
             Ok(bits) => bits,
-            Err(err) if err.kind() == std::io::ErrorKind::UnexpectedEof => 0,
+            Err(err) if err.kind() == borsh::io::ErrorKind::UnexpectedEof => 0,
             Err(err) => return Err(err),
         };
 
         let relay_port = match Option::<u16>::deserialize_reader(reader) {
             Ok(port) => port,
-            Err(err) if err.kind() == std::io::ErrorKind::UnexpectedEof => None,
+            Err(err) if err.kind() == borsh::io::ErrorKind::UnexpectedEof => None,
             Err(err) => return Err(err),
         };
 
         let relay_capacity = match Option::<u32>::deserialize_reader(reader) {
             Ok(capacity) => capacity,
-            Err(err) if err.kind() == std::io::ErrorKind::UnexpectedEof => None,
+            Err(err) if err.kind() == borsh::io::ErrorKind::UnexpectedEof => None,
             Err(err) => return Err(err),
         };
 
         let relay_ttl_ms = match Option::<u64>::deserialize_reader(reader) {
             Ok(ttl_ms) => ttl_ms,
-            Err(err) if err.kind() == std::io::ErrorKind::UnexpectedEof => None,
+            Err(err) if err.kind() == borsh::io::ErrorKind::UnexpectedEof => None,
             Err(err) => return Err(err),
         };
 
         let relay_role = match Option::<RelayRole>::deserialize_reader(reader) {
             Ok(role) => role,
-            Err(err) if err.kind() == std::io::ErrorKind::UnexpectedEof => None,
+            Err(err) if err.kind() == borsh::io::ErrorKind::UnexpectedEof => None,
             Err(err) => return Err(err),
         };
 
         let libp2p_peer_id = match Option::<String>::deserialize_reader(reader) {
             Ok(peer_id) => peer_id,
-            Err(err) if err.kind() == std::io::ErrorKind::UnexpectedEof => None,
+            Err(err) if err.kind() == borsh::io::ErrorKind::UnexpectedEof => None,
             Err(err) => return Err(err),
         };
 
         let relay_circuit_hint = match Option::<String>::deserialize_reader(reader) {
             Ok(hint) => hint,
-            Err(err) if err.kind() == std::io::ErrorKind::UnexpectedEof => None,
+            Err(err) if err.kind() == borsh::io::ErrorKind::UnexpectedEof => None,
             Err(err) => return Err(err),
         };
 
