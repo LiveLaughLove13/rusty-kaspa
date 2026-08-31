@@ -355,31 +355,12 @@ impl<C: DagknightStore + DagknightStoreReader, O: HeaderStoreReader, D: Relation
     }
 
     pub fn find_selected_parent(&self, parents: impl IntoIterator<Item = Hash>) -> Hash {
-        // TODO[DK]: Debugging instrumentation. Should be removed after
-        let mut curr_parents = vec![];
-        let mut kept = vec![];
-        let selected_parent_opt = parents
+        let selected_parent = parents
             .into_iter()
-            .filter_map(|parent| {
-                curr_parents.push(parent);
-                self.get_blue_work(parent)
-                    .map(|blue_work| {
-                        let sb = SortableBlock { hash: parent, blue_work };
-                        kept.push(parent);
-                        sb
-                    })
-                    .ok()
-            })
-            .max();
-
-        if selected_parent_opt.is_none() {
-            panic!(
-                "cg: {} | k: {} | fs: {} | no selected parent | kept: {:?} | all: {:?}",
-                self.root, self.k, self.free_search, kept, curr_parents
-            );
-        }
-
-        let selected_parent = selected_parent_opt.unwrap().hash;
+            .filter_map(|parent| self.get_blue_work(parent).map(|blue_work| SortableBlock { hash: parent, blue_work }).ok())
+            .max()
+            .unwrap()
+            .hash;
 
         if !self.free_search {
             assert!(
@@ -511,24 +492,6 @@ impl<C: DagknightStore + DagknightStoreReader, O: HeaderStoreReader, D: Relation
 
                 // For free_search, select from all parents; for committed search, only from agreeing parents
                 let selected_parent = if self.free_search {
-                    // all parents must already exist assuming topological sorting is honored, so finding one that doesn't
-                    // means an error in processing and must be diagnosed
-                    parents.iter().for_each(|&parent| {
-                        if !self.has(parent) {
-                            last_known_tips.iter().for_each(|&lk_tip| {
-                                if self.reachability_service.is_dag_ancestor_of(parent, lk_tip) {
-                                    println!(
-                                        "cg: {} | k: {} | fs: {} | nca: {:?} | parent {} is in the past of a last known tip {}",
-                                        self.root, self.k, self.free_search, next_chain_ancestor, parent, lk_tip
-                                    );
-                                }
-                            });
-                            panic!(
-                                "cg: {} | k: {} | fs: {} | nca: {:?} | last_known_tips: {:?} | Expected agreeing parent to have coloring data | current: {:#?} | missing_parent: {:?} | curr_parents: {:#?}",
-                                self.root, self.k, self.free_search, next_chain_ancestor, last_known_tips, current_hash, parent, parents
-                            );
-                        }
-                    });
                     self.find_selected_parent(parents.iter().copied())
                 } else {
                     let next_chain_ancestor_of_current = next_chain_ancestor.unwrap();
